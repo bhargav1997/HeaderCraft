@@ -1,0 +1,17 @@
+{
+  "name": "headercraft",
+  "version": "1.2.0",
+  "description": "",
+  "main": "generate_icons.js",
+  "scripts": {
+    "icons": "node generate_icons.js",
+    "zip": "zip -r headercraft.zip . --exclude '*.git*' --exclude 'node_modules/*' --exclude 'package*.json' --exclude 'generate_icons.js' --exclude 'CHROMEWEBSTORE.md' --exclude 'headercraft.zip'"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "canvas": "^3.2.3"
+  }
+}

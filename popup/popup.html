@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HeaderCraft</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Header Bar -->
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-icon">⬡</span>
+        <span class="brand-name">HeaderCraft</span>
+      </div>
+      <div class="header-actions">
+        <button id="btn-share-profile" class="icon-btn has-tooltip" data-tooltip="Share profile via stateless URL link" aria-label="Share profile">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7">
+            <path d="M12.5 7.5a3.5 3.5 0 0 1 0 5l-3 3a3.5 3.5 0 0 1-5-5l1.5-1.5M7.5 12.5a3.5 3.5 0 0 1 0-5l3-3a3.5 3.5 0 0 1 5 5L14 11" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button id="btn-import-url" class="icon-btn has-tooltip" data-tooltip="Import from Share Link / Code" aria-label="Import from link">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7">
+            <path d="M4 14v3h12v-3M10 14V5m0 0 3 3m-3-3L7 8" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="15" cy="5" r="2.5" fill="currentColor"/>
+          </svg>
+        </button>
+        <button id="btn-export" class="icon-btn has-tooltip" data-tooltip="Export profile as JSON" aria-label="Export profile as JSON">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7">
+            <path d="M4 14v3h12v-3M10 3v9m0 0L7 9m3 3 3-3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button id="btn-import" class="icon-btn has-tooltip" data-tooltip="Import HeaderCraft profile JSON" aria-label="Import HeaderCraft profile">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7">
+            <path d="M4 14v3h12v-3M10 14V5m0 0 3 3m-3-3L7 8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button id="btn-import-modheader" class="icon-btn has-tooltip" data-tooltip="Import from ModHeader / Requestly JSON" aria-label="Import from ModHeader or Requestly">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7">
+            <path d="M10 2a8 8 0 1 1 0 16A8 8 0 0 1 10 2zm0 0v16M2 10h16" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <input type="file" id="file-import-input" accept=".json" style="display:none" />
+        <input type="file" id="file-import-modheader" accept=".json" style="display:none" />
+      </div>
+    </header>
+
+    <!-- Layout -->
+    <div class="layout">
+      <!-- Profile Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <span class="sidebar-title">Profiles</span>
+          <button id="btn-add-profile" class="icon-btn small" title="New profile">
+            <svg viewBox="0 0 20 20" fill="currentColor">
+              <path d="M10 4a1 1 0 011 1v4h4a1 1 0 110 2h-4v4a1 1 0 11-2 0v-4H5a1 1 0 110-2h4V5a1 1 0 011-1z"/>
+            </svg>
+          </button>
+        </div>
+        <ul id="profile-list" class="profile-list"></ul>
+        <div class="sidebar-footer">
+          <button id="btn-seed-example" class="btn-seed-example" title="Add Example Profile with demo rules">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" width="12" height="12">
+              <path d="M2 3h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M5 7h6M5 10h4" stroke-linecap="round"/>
+            </svg>
+            <span>+ Demo Profile</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- Main Panel -->
+      <main class="main-panel">
+        <!-- Profile Config -->
+        <section id="profile-config" class="profile-config hidden">
+          <!-- Profile topbar: name + toggle + URL filter -->
+          <div class="profile-topbar">
+            <div class="profile-name-wrap">
+              <div class="name-edit-group">
+                <input
+                  id="profile-name-input"
+                  class="profile-name-input"
+                  type="text"
+                  placeholder="Profile name…"
+                  maxlength="50"
+                />
+                <button id="btn-edit-name" class="edit-name-btn" title="Rename profile">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" width="13" height="13">
+                    <path d="M11.5 2.5a1.414 1.414 0 0 1 2 2L5 13H3v-2L11.5 2.5z" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+              </div>
+              <div class="toggle-wrap">
+                <button
+                  id="btn-scope-tab"
+                  class="scope-tab-btn has-tooltip"
+                  data-tooltip="Scope profile to current active tab only"
+                  aria-label="Scope to Current Tab"
+                >
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="13" height="13">
+                    <circle cx="10" cy="10" r="7"/>
+                    <circle cx="10" cy="10" r="3"/>
+                    <line x1="10" y1="1" x2="10" y2="4"/>
+                    <line x1="10" y1="16" x2="10" y2="19"/>
+                    <line x1="1" y1="10" x2="4" y2="10"/>
+                    <line x1="16" y1="10" x2="19" y2="10"/>
+                  </svg>
+                  <span id="scope-tab-text">All Tabs</span>
+                </button>
+                <label class="toggle" title="Enable / Disable profile">
+                  <input id="profile-enabled-toggle" type="checkbox" />
+                  <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                </label>
+                <span id="profile-status-label" class="status-label off">Off</span>
+              </div>
+            </div>
+
+            <div class="url-filter-row">
+              <label class="field-label" for="url-filter-input">
+                URL Filter
+                <span class="field-hint">(applies to Headers tab)</span>
+              </label>
+              <div class="url-filter-inputs">
+                <input
+                  id="url-filter-input"
+                  class="text-input mono"
+                  type="text"
+                  placeholder="api.example.com  or  .*\.staging\..*"
+                />
+                <label class="regex-toggle" title="Use regex filter">
+                  <input id="use-regex-toggle" type="checkbox" />
+                  <span class="regex-badge">.*</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="profile-actions-row">
+              <button id="btn-delete-profile" class="danger-btn small">Delete Profile</button>
+            </div>
+          </div>
+
+          <!-- Tab Bar -->
+          <div class="tab-bar" role="tablist">
+            <button class="tab-btn active" data-tab="headers" role="tab" aria-selected="true">
+              Headers <span class="tab-count" id="count-headers">0</span>
+            </button>
+            <button class="tab-btn" data-tab="redirects" role="tab" aria-selected="false">
+              Redirects <span class="tab-count" id="count-redirects">0</span>
+            </button>
+            <button class="tab-btn" data-tab="queryparams" role="tab" aria-selected="false">
+              Params <span class="tab-count" id="count-queryparams">0</span>
+            </button>
+            <button class="tab-btn" data-tab="mocks" role="tab" aria-selected="false">
+              Mocks <span class="tab-count" id="count-mocks">0</span>
+            </button>
+          </div>
+
+          <!-- Tab Toolbar (add button + refresh vars) -->
+          <div class="tab-toolbar">
+            <button id="btn-add-rule" class="add-rule-btn">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13">
+                <path d="M10 4a1 1 0 011 1v4h4a1 1 0 110 2h-4v4a1 1 0 11-2 0v-4H5a1 1 0 110-2h4V5a1 1 0 011-1z"/>
+              </svg>
+              <span id="add-rule-label">Add Header</span>
+            </button>
+            <button id="btn-refresh-vars" class="icon-btn small has-tooltip" data-tooltip="Refresh variables ({{$uuid}}, etc.)" aria-label="Refresh variables">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" width="13" height="13">
+                <path d="M13.5 8A5.5 5.5 0 1 1 8 2.5c1.5 0 2.86.6 3.86 1.57L13.5 2v4h-4" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Rules container (re-rendered on tab switch) -->
+          <div id="rules-container" class="rules-container"></div>
+          <div id="empty-tab-state" class="empty-rules-state hidden">
+            <svg viewBox="0 0 48 48" fill="none" width="40" height="40">
+              <rect width="48" height="48" rx="12" fill="url(#eg)"/>
+              <defs>
+                <linearGradient id="eg" x1="0" y1="0" x2="48" y2="48">
+                  <stop offset="0%"   stop-color="#6366f1" stop-opacity="0.15"/>
+                  <stop offset="100%" stop-color="#8b5cf6" stop-opacity="0.15"/>
+                </linearGradient>
+              </defs>
+              <path d="M14 24h20M14 17h20M14 31h12" stroke="#6366f1" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <p id="empty-tab-message">No rules yet.</p>
+            <p class="empty-hint" id="empty-tab-hint">Click <strong>Add Header</strong> to get started.</p>
+          </div>
+        </section>
+
+        <!-- No profile selected state -->
+        <section id="no-profile-state" class="no-profile-state">
+          <svg viewBox="0 0 64 64" fill="none" width="52" height="52">
+            <rect width="64" height="64" rx="16" fill="url(#ng)"/>
+            <defs>
+              <linearGradient id="ng" x1="0" y1="0" x2="64" y2="64">
+                <stop offset="0%"   stop-color="#6366f1" stop-opacity="0.18"/>
+                <stop offset="100%" stop-color="#8b5cf6" stop-opacity="0.18"/>
+              </linearGradient>
+            </defs>
+            <path d="M20 32h24M20 24h24M20 40h16" stroke="#6366f1" stroke-width="2.2" stroke-linecap="round"/>
+          </svg>
+          <p>Select a profile or create a new one.</p>
+        </section>
+      </main>
+    </div>
+
+    <!-- Share & Import Stateless URL Modal -->
+    <div id="share-modal" class="modal-backdrop hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 id="modal-title" class="modal-title">Share Profile</h3>
+          <button id="btn-close-modal" class="modal-close-btn" title="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p id="modal-desc" class="modal-desc">Stateless URL with compressed profile payload:</p>
+          <div class="modal-input-group">
+            <input id="modal-input" class="modal-input mono" type="text" spellcheck="false" />
+            <button id="modal-action-btn" class="modal-btn primary">Copy Link</button>
+          </div>
+          <p id="modal-subtext" class="modal-subtext">Zero cloud storage. The entire profile is encoded directly in the URL hash for 100% private sharing.</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast" class="toast" aria-live="polite"></div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
