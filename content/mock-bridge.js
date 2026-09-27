@@ -132,7 +132,7 @@ function injectEnvBadge(profileName, profileId) {
 
   const label = document.createElement('div');
   label.id = 'hc-env-badge-label';
-  label.title = 'HeaderCraft active environment (click to dismiss)';
+  label.title = 'HeaderCraft Dev active environment (click to dismiss)';
   label.style.cssText = `
     position:fixed;top:6px;right:10px;z-index:2147483647;
     font-family:'Inter',system-ui,sans-serif;font-size:10px;font-weight:600;
@@ -141,7 +141,7 @@ function injectEnvBadge(profileName, profileId) {
     opacity:.9;white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis;
     transition:opacity 0.2s, transform 0.2s;user-select:none;
   `;
-  label.textContent = `HeaderCraft: ${profileName} ✕`;
+  label.textContent = `HeaderCraft Dev: ${profileName} ✕`;
   label.addEventListener('click', () => {
     badgeDismissed = true;
     removeEnvBadge();

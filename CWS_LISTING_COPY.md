@@ -8,8 +8,8 @@
 
 ## 📌 1. Title (Use Exact Copy Below)
 
-**HeaderCraft - Modify Headers & Mock APIs**  
-*(39 characters. Clean, strong brand name, contains highest-volume search keywords without trademark violations).*
+**HeaderCraft Dev - HTTP Header & Request Modifier**  
+*(49 characters. Clean, distinctive brand name, contains high-impact keywords, 100% compliant with CWS naming guidelines).*
 
 ---
 
@@ -75,7 +75,7 @@ HeaderCraft does not collect, store, transmit, or analyze any user data, browsin
 ### 📋 Chrome Web Store Submission Checklist
 
 - [x] **Category:** Developer Tools
-- [x] **Title:** `HeaderCraft - Modify Headers & Mock APIs`
+- [x] **Title:** `HeaderCraft Dev - HTTP Header & Request Modifier`
 - [x] **Short Description:** Included above (131/132 chars)
 - [x] **Detailed Description:** Paste text from Section 3 above
 - [x] **Privacy Policy:** HeaderCraft operates 100% locally with zero user data collection

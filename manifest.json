@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "HeaderCraft",
+  "name": "HeaderCraft Dev - HTTP Header & Request Modifier",
   "version": "1.3.0",
   "description": "Free, local-first MV3 header modifier with auto-disable timers, environment badge, response delay simulation, and rule hit counters.",
   "icons": {
@@ -10,7 +10,7 @@
   },
   "action": {
     "default_popup": "popup/popup.html",
-    "default_title": "HeaderCraft",
+    "default_title": "HeaderCraft Dev",
     "default_icon": {
       "16": "icons/icon-16.png",
       "48": "icons/icon-48.png",
