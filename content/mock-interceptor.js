@@ -8,14 +8,8 @@
  * This script runs in Chrome's MAIN world (declared in manifest.json):
  *   "world": "MAIN"
  * Therefore it CANNOT access chrome.* APIs. It receives its configuration
- * via a CustomEvent dispatched by mock-bridge.js (isolated world).
- *
- * Key safety rules:
- *  1. NEVER intercept a request if urlFilter is empty — that would match everything.
- *  2. ALWAYS call the native fetch/XHR with the global scope (window) as `this`,
- *     not the caller's `this`. Chrome's native fetch validates its `this` binding
- *     and throws "Failed to fetch" when called with the wrong context.
- *  3. Guard against window.fetch being absent or already replaced.
+ * via a CustomEvent dispatched by mock-bridge.js (isolated world) and
+ * document.documentElement.dataset.hcMocks.
  */
 
 (function () {
@@ -26,9 +20,10 @@
   let mocks = [];
   let consoleLogging = true;
 
-  document.addEventListener('__headercraft_mocks__', (e) => {
+  function updateMocksFromDetail(detail) {
+    if (!detail) return;
     try {
-      const parsed = JSON.parse(e.detail);
+      const parsed = typeof detail === 'string' ? JSON.parse(detail) : detail;
       if (Array.isArray(parsed)) {
         mocks = parsed;
         consoleLogging = true;
@@ -39,24 +34,65 @@
     } catch (_) {
       mocks = [];
     }
-  });
+  }
+
+  function syncMocksFromDOM() {
+    try {
+      const raw = document.documentElement?.dataset?.hcMocks;
+      if (raw) {
+        updateMocksFromDetail(raw);
+      }
+    } catch (_) {}
+  }
+
+  // Initial sync from DOM
+  syncMocksFromDOM();
+
+  // Listen for live updates via CustomEvents
+  document.addEventListener('__headercraft_mocks__', (e) => updateMocksFromDetail(e.detail));
+  window.addEventListener('__headercraft_mocks__', (e) => updateMocksFromDetail(e.detail));
+
+  // Request latest mocks from bridge
+  function requestMocks() {
+    document.dispatchEvent(new CustomEvent('__headercraft_request_mocks__', { bubbles: true, composed: true }));
+    window.dispatchEvent(new CustomEvent('__headercraft_request_mocks__', { bubbles: true, composed: true }));
+  }
+  requestMocks();
 
   function findMock(url, method) {
+    if (!url || typeof url !== 'string') return null;
+
+    if (!mocks.length) {
+      syncMocksFromDOM();
+    }
+
     return mocks.find((m) => {
-      // BUG FIX #1: never match when urlFilter is blank — url.includes('') is
-      // always true, which would intercept every request on every site.
       if (!m.urlFilter || !m.urlFilter.trim()) return false;
 
+      const filter = m.urlFilter.trim();
       let urlMatch = false;
-      try {
-        urlMatch = m.useRegex
-          ? new RegExp(m.urlFilter).test(url)
-          : url.includes(m.urlFilter);
-      } catch (_) { urlMatch = false; }
 
-      const methodMatch =
-        !m.method || m.method === '*' ||
-        m.method.toUpperCase() === (method || 'GET').toUpperCase();
+      try {
+        if (m.useRegex) {
+          urlMatch = new RegExp(filter, 'i').test(url);
+        } else {
+          urlMatch = url.includes(filter) ||
+                     url.toLowerCase().includes(filter.toLowerCase());
+          if (!urlMatch && filter.startsWith('/')) {
+            try {
+              const parsedUrl = new URL(url, window.location.href);
+              urlMatch = parsedUrl.pathname.includes(filter) ||
+                         (parsedUrl.pathname + parsedUrl.search).includes(filter);
+            } catch (_) {}
+          }
+        }
+      } catch (_) {
+        urlMatch = url.includes(filter);
+      }
+
+      const reqMethod = (method || 'GET').toUpperCase();
+      const mockMethod = (m.method || '*').toUpperCase();
+      const methodMatch = mockMethod === '*' || mockMethod === reqMethod;
 
       return urlMatch && methodMatch;
     });
@@ -72,14 +108,7 @@
   function logDevToolsBridge(type, method, url, mock) {
     if (!consoleLogging) return;
 
-    // Requirement: In-Console Interception Logger
-    console.log(
-      '%c[HeaderCraft] Mocked %s',
-      'background: #059669; color: white; padding: 2px 4px; border-radius: 2px;',
-      url
-    );
-
-    const status = mock.statusCode ?? 200;
+    const status = Number(mock.statusCode) || 200;
     const isError = status >= 400;
     const badgeColor = isError ? '#f87171' : '#34d399';
     const badgeBg = isError ? '#450a0a' : '#064e3b';
@@ -94,7 +123,7 @@
     console.log('%cStatus Code:%c ' + status, 'color: #94a3b8; font-weight: bold;', `color: ${badgeColor}; font-weight: bold;`);
     console.log('%cHeaders:', 'color: #94a3b8; font-weight: bold;', buildHeaders(mock));
     try {
-      const parsed = JSON.parse(mock.responseBody ?? '');
+      const parsed = typeof mock.responseBody === 'string' ? JSON.parse(mock.responseBody) : mock.responseBody;
       console.log('%cMocked Response (JSON):', 'color: #94a3b8; font-weight: bold;', parsed);
     } catch (_) {
       console.log('%cMocked Response (Raw):', 'color: #94a3b8; font-weight: bold;', mock.responseBody ?? '');
@@ -104,42 +133,40 @@
 
   // ── Patch fetch ─────────────────────────────────────────────────────────────
 
-  // BUG FIX #2: guard against window.fetch being absent (service worker pages,
-  // some sandboxed iframes, or scripts that replace fetch before ours runs).
-  const _fetch = window.fetch?.bind(window); // bind to window NOW, not at call time
+  const _fetch = window.fetch?.bind(window);
 
   if (_fetch) {
     window.fetch = async function (...args) {
       const [resource, options = {}] = args;
 
-      // Safely extract the URL regardless of argument type
       let url = '';
       try {
         url = typeof resource === 'string'  ? resource
             : resource instanceof URL       ? resource.href
             : resource?.url ?? '';
-      } catch (_) { /* Request object access failed, pass through */ }
+      } catch (_) { /* Request object access failed */ }
 
-      const method = (options?.method || 'GET').toUpperCase();
+      const method = (options?.method || (typeof resource === 'object' && resource?.method) || 'GET').toUpperCase();
 
       const mock = findMock(url, method);
       if (mock) {
         logDevToolsBridge('fetch', method, url, mock);
-        const delayMs = mock.delayMs ?? 0;
-        const respond = () => new Response(mock.responseBody ?? '', {
-          status:  mock.statusCode  ?? 200,
-          headers: buildHeaders(mock),
-        });
+        const delayMs = Number(mock.delayMs) || 0;
+        const respond = () => {
+          const bodyText = typeof mock.responseBody === 'string' ? mock.responseBody : JSON.stringify(mock.responseBody ?? '');
+          const status = Number(mock.statusCode) || 200;
+          return new Response(bodyText, {
+            status: status,
+            statusText: status >= 200 && status < 300 ? 'OK' : status === 404 ? 'Not Found' : status === 500 ? 'Internal Server Error' : 'Mocked',
+            headers: new Headers(buildHeaders(mock)),
+          });
+        };
         if (delayMs > 0) {
           return new Promise(resolve => setTimeout(() => resolve(respond()), delayMs));
         }
         return respond();
       }
 
-      // BUG FIX #3: use the pre-bound _fetch (bound to window at capture time)
-      // instead of _fetch.apply(this, args). Chrome's native fetch validates its
-      // `this` binding — passing the caller's `this` (which may not be window)
-      // throws "TypeError: Failed to fetch" even for completely valid requests.
       return _fetch(...args);
     };
   }
@@ -157,10 +184,9 @@
 
       const _open = xhr.open.bind(xhr);
       xhr.open = function (method, url, async = true, ...rest) {
-        _method = method;
-        _url    = url;
-        // Only look for a mock when urlFilter is non-empty (same safety check as fetch)
-        _mock   = url ? findMock(url, method) : null;
+        _method = (method || 'GET').toUpperCase();
+        _url    = url ? String(url) : '';
+        _mock   = _url ? findMock(_url, _method) : null;
         if (!_mock) return _open(method, url, async, ...rest);
       };
 
@@ -170,17 +196,20 @@
 
         const mock = _mock;
         logDevToolsBridge('XHR', _method, _url, mock);
-        const delayMs = mock.delayMs ?? 0;
+        const delayMs = Number(mock.delayMs) || 0;
 
         setTimeout(() => {
+          const bodyText = typeof mock.responseBody === 'string' ? mock.responseBody : JSON.stringify(mock.responseBody ?? '');
+          const status = Number(mock.statusCode) || 200;
+
           const define = (key, val) =>
             Object.defineProperty(xhr, key, { get: () => val, configurable: true });
 
           define('readyState',  4);
-          define('status',      mock.statusCode ?? 200);
-          define('statusText',  'OK');
-          define('responseText', mock.responseBody ?? '');
-          define('response',     mock.responseBody ?? '');
+          define('status',      status);
+          define('statusText',  status >= 200 && status < 300 ? 'OK' : status === 404 ? 'Not Found' : status === 500 ? 'Internal Server Error' : 'Mocked');
+          define('responseText', bodyText);
+          define('response',     bodyText);
           define('responseURL',  _url);
 
           xhr.dispatchEvent(new ProgressEvent('readystatechange'));

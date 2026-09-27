@@ -203,12 +203,25 @@ function clearAutoDisableTimer() {
 async function setAutoDisableTimer(minutes) {
   clearAutoDisableTimer();
   const profile = profiles.find(p => p.id === selectedProfileId);
-  if (!profile || !minutes) {
-    if (profile) { delete profile.autoDisableAt; }
-    await saveStorage();
+  if (!profile) return;
+
+  if (!minutes || minutes <= 0) {
+    delete profile.autoDisableAt;
     autoDisableCountdown?.classList.add('hidden');
+    await saveStorage();
     return;
   }
+
+  // Setting an auto-disable timer turns the profile ON if it was OFF
+  if (!profile.enabled) {
+    profile.enabled = true;
+    activeProfileId = profile.id;
+    profileEnabledToggle.checked = true;
+    profileStatusLabel.textContent = 'On';
+    profileStatusLabel.className = 'status-label on';
+    renderProfileList();
+  }
+
   const fireAt = Date.now() + minutes * 60_000;
   profile.autoDisableAt = fireAt;
   await saveStorage();
@@ -218,22 +231,32 @@ async function setAutoDisableTimer(minutes) {
 function startCountdownDisplay() {
   clearAutoDisableTimer();
   const profile = profiles.find(p => p.id === selectedProfileId);
-  if (!profile?.autoDisableAt) {
+  if (!profile?.autoDisableAt || !profile.enabled) {
     autoDisableCountdown?.classList.add('hidden');
     return;
   }
   function tick() {
-    const remaining = profile.autoDisableAt - Date.now();
+    const p = profiles.find(item => item.id === selectedProfileId);
+    if (!p || !p.enabled || !p.autoDisableAt) {
+      clearAutoDisableTimer();
+      autoDisableCountdown?.classList.add('hidden');
+      if (autoDisableSelect) autoDisableSelect.value = '0';
+      return;
+    }
+    const remaining = p.autoDisableAt - Date.now();
     if (remaining <= 0) {
       clearAutoDisableTimer();
       autoDisableCountdown?.classList.add('hidden');
-      // Auto-disable the profile
-      profile.enabled = false;
-      delete profile.autoDisableAt;
-      activeProfileId = profiles.find(p => p.enabled)?.id ?? null;
+      if (autoDisableSelect) autoDisableSelect.value = '0';
+      p.enabled = false;
+      delete p.autoDisableAt;
+      activeProfileId = profiles.find(x => x.enabled)?.id ?? null;
+      profileEnabledToggle.checked = false;
+      profileStatusLabel.textContent = 'Off';
+      profileStatusLabel.className = 'status-label off';
       saveStorage().then(() => {
-        renderMainPanel();
-        showToast(`Profile "${profile.name}" auto-disabled`, 'info');
+        render();
+        showToast(`Profile "${p.name}" auto-disabled`, 'info');
       });
       return;
     }
@@ -890,7 +913,7 @@ function renderMainPanel() {
   // Sync auto-disable UI
   if (autoDisableSelect) {
     autoDisableSelect.value = '0';
-    if (profile.autoDisableAt && profile.autoDisableAt > Date.now()) {
+    if (profile.enabled && profile.autoDisableAt && profile.autoDisableAt > Date.now()) {
       const remaining = profile.autoDisableAt - Date.now();
       // Find closest preset
       const mins = Math.ceil(remaining / 60_000);
@@ -1922,8 +1945,23 @@ profileEnabledToggle.addEventListener('change', () => {
   const enabled = profileEnabledToggle.checked;
   profileStatusLabel.textContent = enabled ? 'On' : 'Off';
   profileStatusLabel.className = 'status-label ' + (enabled ? 'on' : 'off');
-  if (enabled) activeProfileId = selectedProfileId;
-  else resetHitCounters(); // clear hit counters when profile is turned off
+  const profile = profiles.find(p => p.id === selectedProfileId);
+  if (enabled) {
+    activeProfileId = selectedProfileId;
+    if (profile) profile.enabled = true;
+    if (profile?.autoDisableAt && profile.autoDisableAt > Date.now()) {
+      startCountdownDisplay();
+    }
+  } else {
+    resetHitCounters(); // clear hit counters when profile is turned off
+    clearAutoDisableTimer();
+    autoDisableCountdown?.classList.add('hidden');
+    if (autoDisableSelect) autoDisableSelect.value = '0';
+    if (profile) {
+      profile.enabled = false;
+      delete profile.autoDisableAt;
+    }
+  }
   updateActiveProfile('enabled', enabled);
 });
 

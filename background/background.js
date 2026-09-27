@@ -290,11 +290,27 @@ async function updateToolbarBadge(profiles, activeProfileId) {
   }
 }
 
+function syncAutoDisableAlarms(profiles) {
+  if (!Array.isArray(profiles)) return;
+  const now = Date.now();
+  for (const p of profiles) {
+    const alarmName = `hc-auto-disable-${p.id}`;
+    if (p.enabled && p.autoDisableAt && p.autoDisableAt > now) {
+      chrome.alarms.create(alarmName, { when: p.autoDisableAt });
+    } else {
+      chrome.alarms.clear(alarmName);
+    }
+  }
+}
+
 // ── Listeners ─────────────────────────────────────────────────────────────────
 
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local') return;
   if ('profiles' in changes || 'activeProfileId' in changes) {
+    if ('profiles' in changes) {
+      syncAutoDisableAlarms(changes.profiles.newValue);
+    }
     rebuildRules();
     updateToolbarBadge();
   }
@@ -330,7 +346,7 @@ chrome.commands.onCommand.addListener(async (command) => {
 /** Periodic refresh so {{$uuid}} / {{$timestamp}} values stay fresh.
  *  Also fires auto-disable checks for profiles with autoDisableAt set. */
 chrome.alarms.onAlarm.addListener(async alarm => {
-  if (alarm.name === 'hc-dynamic-refresh') {
+  if (alarm.name === 'hc-dynamic-refresh' || alarm.name.startsWith('hc-auto-disable-')) {
     // Check and execute any pending auto-disable timers
     const { profiles = [], activeProfileId = null } = await chrome.storage.local.get(['profiles', 'activeProfileId']);
     const now = Date.now();
@@ -346,7 +362,7 @@ chrome.alarms.onAlarm.addListener(async alarm => {
     });
     if (changed) {
       const newActiveId = updated.find(p => p.enabled)?.id ?? null;
-      await chrome.storage.local.set({ profiles: updated, activeProfileId: newActiveId ?? activeProfileId });
+      await chrome.storage.local.set({ profiles: updated, activeProfileId: newActiveId });
     } else {
       rebuildRules();
     }
@@ -571,14 +587,22 @@ async function seedUnifiedExampleProfile() {
 
 // ── Lifecycle Listeners ───────────────────────────────────────────────────────
 
-chrome.runtime.onInstalled.addListener(async () => {
+async function initServiceWorker() {
   await seedUnifiedExampleProfile();
-  // Refresh dynamic variable rules every minute (MV3 minimum alarm period)
-  await chrome.alarms.create('hc-dynamic-refresh', { periodInMinutes: 1 });
+  const refreshAlarm = await chrome.alarms.get('hc-dynamic-refresh');
+  if (!refreshAlarm) {
+    await chrome.alarms.create('hc-dynamic-refresh', { periodInMinutes: 1 });
+  }
+  const { profiles = [] } = await chrome.storage.local.get(['profiles']);
+  syncAutoDisableAlarms(profiles);
   await updateToolbarBadge();
+}
+
+chrome.runtime.onInstalled.addListener(async () => {
+  await initServiceWorker();
   console.log('[HeaderCraft] v1.3.0 installed / updated.');
 });
 
 // Run once on service worker startup in case installed event was missed
-seedUnifiedExampleProfile().then(() => updateToolbarBadge());
+initServiceWorker();
 

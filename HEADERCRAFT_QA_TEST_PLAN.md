@@ -125,18 +125,28 @@
 
 ---
 
-### Test Case 8: API Response Mock Interceptor
-**Goal:** Intercept API network calls and return fake JSON mock data or error codes (200, 404, 500).
+### Test Case 8: API Response Mock Interceptor (Client-Side fetch & XHR)
+**Goal:** Intercept JavaScript `fetch()` and `XMLHttpRequest` API network calls on any web page and return fake JSON mock data, error status codes (200, 404, 500), and custom response delays without requiring a backend server.
 
 - **Step 1:** Click the **Mocks** tab in HeaderCraft.
 - **Step 2:** Click **+ Add Mock** (or select Preset **Mock 500 Server Error**).
 - **Step 3:** Set:
-  - URL Filter: `https://httpbin.org/get`
-  - Status Code: `500`
-  - Response Body: `{"error": "Internal Server Error", "mockedBy": "HeaderCraft"}`
-- **Step 4:** Visit `https://httpbin.org/get` in your browser.
-- **Expected Result:** Instead of the normal page, you get a 500 error response with body `{"error": "Internal Server Error", "mockedBy": "HeaderCraft"}`!
-- **Step 5:** Turn OFF the mock rule toggle and refresh — normal page restores.
+  - **Method:** `*` (or `GET`)
+  - **URL Filter:** `/api/v1/users` (or `https://httpbin.org/get`)
+  - **Status Code:** `500` (or `200`)
+  - **Response Body:** `{"error": "Internal Server Error", "mockedBy": "HeaderCraft"}`
+  - **Response Delay:** `0` ms
+- **Step 4:** Open any website in your browser (e.g., `https://httpbin.org` or `https://example.com`), and open DevTools Console (`F12` or `Cmd+Option+I` -> Console tab).
+- **Step 5:** Run a test fetch in the Console:
+  ```javascript
+  fetch('https://httpbin.org/get').then(res => res.json()).then(data => console.log('Result:', data));
+  ```
+- **Expected Result:**
+  1. The DevTools console immediately prints HeaderCraft's formatted interception log:
+     `[HeaderCraft] Intercepted (fetch) GET https://httpbin.org/get -> Mocked 500`
+  2. The response receives your custom fake JSON body:
+     `Result: { error: "Internal Server Error", mockedBy: "HeaderCraft" }`
+- **Step 6:** Turn **OFF** the mock rule toggle in HeaderCraft and re-run the same `fetch()` in the Console — the real network response is restored!
 
 ---
 

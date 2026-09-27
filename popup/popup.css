@@ -1126,44 +1126,62 @@ html, body {
   transform: translateX(-50%) translateY(0);
 }
 
-/* Tooltips near left edges (main panel buttons, etc.): project rightwards to never get cut off by left sidebar */
-.main-panel .has-tooltip::after,
-.scope-tab-btn::after,
+/* Tooltips near left edges: project rightwards so they never clip into sidebar */
+.sidebar .has-tooltip::after,
 .edit-name-btn::after,
 .presets-btn::after,
+.tab-toolbar-left .has-tooltip::after,
 #btn-expand-tab::after,
 #btn-help::after {
-  left: 0;
-  right: auto;
-  transform: translateY(-3px);
+  left: 0 !important;
+  right: auto !important;
+  transform: translateY(-3px) !important;
 }
 
-.main-panel .has-tooltip:hover::after,
-.scope-tab-btn:hover::after,
+.sidebar .has-tooltip:hover::after,
 .edit-name-btn:hover::after,
 .presets-btn:hover::after,
+.tab-toolbar-left .has-tooltip:hover::after,
 #btn-expand-tab:hover::after,
 #btn-help:hover::after {
-  transform: translateY(0);
+  transform: translateY(0) !important;
 }
 
-/* Tooltips on far right edge: project leftwards */
+/* Tooltips on far right edge: project leftwards so they never clip off screen */
+#btn-import-modheader::after,
+#btn-import::after,
+#btn-export::after,
+#btn-import-url::after,
+#btn-share-profile::after,
 .header-actions button:last-child::after,
 .header-actions button:nth-last-child(2)::after,
 .sidebar-header .has-tooltip::after,
+.scope-tab-btn::after,
 .profile-actions-right .has-tooltip::after,
+.tab-toolbar-right .has-tooltip::after,
+.mock-logs-btn::after,
+#btn-refresh-vars::after,
 .btn-remove-rule::after {
-  left: auto;
-  right: 0;
-  transform: translateY(-3px);
+  left: auto !important;
+  right: 0 !important;
+  transform: translateY(-3px) !important;
 }
 
+#btn-import-modheader:hover::after,
+#btn-import:hover::after,
+#btn-export:hover::after,
+#btn-import-url:hover::after,
+#btn-share-profile:hover::after,
 .header-actions button:last-child:hover::after,
 .header-actions button:nth-last-child(2):hover::after,
 .sidebar-header .has-tooltip:hover::after,
+.scope-tab-btn:hover::after,
 .profile-actions-right .has-tooltip:hover::after,
+.tab-toolbar-right .has-tooltip:hover::after,
+.mock-logs-btn:hover::after,
+#btn-refresh-vars:hover::after,
 .btn-remove-rule:hover::after {
-  transform: translateY(0);
+  transform: translateY(0) !important;
 }
 
 .add-rule-btn {
