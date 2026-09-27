@@ -55,7 +55,7 @@
       <aside class="sidebar">
         <div class="sidebar-header">
           <span class="sidebar-title">Profiles</span>
-          <button id="btn-add-profile" class="icon-btn small" title="New profile">
+          <button id="btn-add-profile" class="icon-btn small has-tooltip" data-tooltip="Create new profile" aria-label="Create new profile">
             <svg viewBox="0 0 20 20" fill="currentColor">
               <path d="M10 4a1 1 0 011 1v4h4a1 1 0 110 2h-4v4a1 1 0 11-2 0v-4H5a1 1 0 110-2h4V5a1 1 0 011-1z"/>
             </svg>
@@ -88,7 +88,7 @@
                   placeholder="Profile name…"
                   maxlength="50"
                 />
-                <button id="btn-edit-name" class="edit-name-btn" title="Rename profile">
+                <button id="btn-edit-name" class="edit-name-btn has-tooltip" data-tooltip="Rename profile" aria-label="Rename profile">
                   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" width="13" height="13">
                     <path d="M11.5 2.5a1.414 1.414 0 0 1 2 2L5 13H3v-2L11.5 2.5z" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
@@ -138,7 +138,20 @@
               </div>
             </div>
 
+            <!-- Auto-disable timer row -->
             <div class="profile-actions-row">
+              <div class="auto-disable-wrap">
+                <label class="field-label" for="auto-disable-select">Auto-disable</label>
+                <select id="auto-disable-select" class="auto-disable-select" title="Automatically disable this profile after a set time">
+                  <option value="0">Never</option>
+                  <option value="15">15 min</option>
+                  <option value="30">30 min</option>
+                  <option value="60">1 hour</option>
+                  <option value="120">2 hours</option>
+                  <option value="480">8 hours</option>
+                </select>
+                <span id="auto-disable-countdown" class="auto-disable-countdown hidden"></span>
+              </div>
               <button id="btn-delete-profile" class="danger-btn small">Delete Profile</button>
             </div>
           </div>
@@ -159,25 +172,62 @@
             </button>
           </div>
 
-          <!-- Tab Toolbar (add button + refresh vars) -->
+          <!-- Tab Toolbar (add button + presets + mock logs + refresh vars) -->
           <div class="tab-toolbar">
-            <button id="btn-add-rule" class="add-rule-btn">
-              <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13">
-                <path d="M10 4a1 1 0 011 1v4h4a1 1 0 110 2h-4v4a1 1 0 11-2 0v-4H5a1 1 0 110-2h4V5a1 1 0 011-1z"/>
-              </svg>
-              <span id="add-rule-label">Add Header</span>
-            </button>
-            <button id="btn-refresh-vars" class="icon-btn small has-tooltip" data-tooltip="Refresh variables ({{$uuid}}, etc.)" aria-label="Refresh variables">
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" width="13" height="13">
-                <path d="M13.5 8A5.5 5.5 0 1 1 8 2.5c1.5 0 2.86.6 3.86 1.57L13.5 2v4h-4" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </button>
+            <div class="tab-toolbar-left">
+              <button id="btn-add-rule" class="add-rule-btn">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13">
+                  <path d="M10 4a1 1 0 011 1v4h4a1 1 0 110 2h-4v4a1 1 0 11-2 0v-4H5a1 1 0 110-2h4V5a1 1 0 011-1z"/>
+                </svg>
+                <span id="add-rule-label">Add Header</span>
+              </button>
+
+              <!-- Quick Presets Dropdown (Headers & Params tabs) -->
+              <div id="presets-dropdown-wrap" class="presets-dropdown-wrap">
+                <button id="btn-presets" class="presets-btn has-tooltip" data-tooltip="View all presets" aria-label="Presets">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" width="12" height="12" class="preset-btn-icon">
+                    <path d="M2 4h12M4 8h8M6 12h4" stroke-linecap="round"/>
+                  </svg>
+                  <span>Presets</span>
+                  <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" width="7" height="7">
+                    <path d="M2.5 4.5 6 8l3.5-3.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+                <div id="presets-menu" class="presets-menu hidden"></div>
+              </div>
+            </div>
+
+            <div class="tab-toolbar-right">
+              <!-- Mock Console Logger Toggle (for Mocks tab) -->
+              <button id="btn-mock-logs" class="mock-logs-btn has-tooltip hidden" data-tooltip="Toggle DevTools console interception logs" aria-label="Toggle DevTools logs">
+                <span class="mock-logs-dot"></span>
+                <span id="mock-logs-text">Logs: ON</span>
+              </button>
+
+              <button id="btn-refresh-vars" class="icon-btn small has-tooltip" data-tooltip="Refresh variables ({{$uuid}}, etc.)" aria-label="Refresh variables">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" width="13" height="13">
+                  <path d="M13.5 8A5.5 5.5 0 1 1 8 2.5c1.5 0 2.86.6 3.86 1.57L13.5 2v4h-4" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
           </div>
+
+          <!-- Quick Presets Bar (Always visible for fast 1-click access on Headers & Params tabs) -->
+          <div id="presets-strip" class="presets-strip hidden">
+            <div class="presets-strip-label">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" width="11" height="11">
+                <path d="M2 4h12M4 8h8M6 12h4" stroke-linecap="round"/>
+              </svg>
+              <span>Presets:</span>
+            </div>
+            <div id="presets-chips" class="presets-chips"></div>
+          </div>
+
 
           <!-- Rules container (re-rendered on tab switch) -->
           <div id="rules-container" class="rules-container"></div>
           <div id="empty-tab-state" class="empty-rules-state hidden">
-            <svg viewBox="0 0 48 48" fill="none" width="40" height="40">
+            <svg viewBox="0 0 48 48" fill="none" width="36" height="36" class="empty-icon">
               <rect width="48" height="48" rx="12" fill="url(#eg)"/>
               <defs>
                 <linearGradient id="eg" x1="0" y1="0" x2="48" y2="48">
@@ -187,8 +237,19 @@
               </defs>
               <path d="M14 24h20M14 17h20M14 31h12" stroke="#6366f1" stroke-width="2" stroke-linecap="round"/>
             </svg>
-            <p id="empty-tab-message">No rules yet.</p>
-            <p class="empty-hint" id="empty-tab-hint">Click <strong>Add Header</strong> to get started.</p>
+            <p id="empty-tab-message" class="empty-title">No rules yet.</p>
+            <p class="empty-hint" id="empty-tab-hint">Click <strong>Add Header</strong> or select a preset below.</p>
+            
+            <!-- 1-Click Presets Grid in Empty State -->
+            <div id="empty-presets-wrapper" class="empty-presets-wrapper hidden">
+              <div class="empty-presets-header">
+                <span>Quick Presets</span>
+                <span class="empty-presets-sub">1-click apply</span>
+              </div>
+              <div id="empty-presets-list" class="empty-presets-grid"></div>
+            </div>
+
+            <button id="btn-empty-action" class="empty-action-btn">+ Add your first rule</button>
           </div>
         </section>
 

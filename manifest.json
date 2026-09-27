@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "HeaderCraft",
-  "version": "1.2.0",
-  "description": "Free, local-first Manifest V3 header modifier, URL redirector, query-param injector, and API response mocker.",
+  "version": "1.3.0",
+  "description": "Free, local-first MV3 header modifier with auto-disable timers, environment badge, response delay simulation, and rule hit counters.",
   "icons": {
     "16": "icons/icon-16.png",
     "48": "icons/icon-48.png",
@@ -38,18 +38,27 @@
   ],
   "permissions": [
     "declarativeNetRequest",
-    "declarativeNetRequestFeedback",
     "storage",
-    "alarms",
-    "tabs"
+    "alarms"
   ],
   "host_permissions": [
     "<all_urls>"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["content/mock-interceptor.js"],
+      "matches": ["<all_urls>"],
+      "use_dynamic_url": false
+    }
   ],
   "commands": {
     "toggle-active-profile": {
       "suggested_key": { "default": "Alt+Shift+H" },
       "description": "Toggle the active profile on/off"
+    },
+    "cycle-profile": {
+      "suggested_key": { "default": "Alt+Shift+P" },
+      "description": "Cycle to the next profile"
     }
   }
 }

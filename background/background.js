@@ -220,8 +220,45 @@ async function rebuildRules() {
     });
 
     console.log(`[HeaderCraft] Rules rebuilt — Dynamic: ${addDynamicRules.length}, Session (Tab-Scoped): ${addSessionRules.length}`);
+    await updateToolbarBadge(profiles, activeProfileId);
   } catch (err) {
     console.error('[HeaderCraft] Rule rebuild error:', err);
+  }
+}
+
+/**
+ * Dynamic Toolbar Badge:
+ * Shows the total number of active rules for the enabled profile,
+ * or clears the badge if disabled or 0 rules.
+ */
+async function updateToolbarBadge(profiles, activeProfileId) {
+  try {
+    if (!profiles || !activeProfileId) {
+      const data = await chrome.storage.local.get(['profiles', 'activeProfileId']);
+      profiles = data.profiles ?? [];
+      activeProfileId = data.activeProfileId ?? null;
+    }
+
+    const activeProfile = profiles.find(p => p.id === activeProfileId && p.enabled);
+    if (!activeProfile) {
+      await chrome.action.setBadgeText({ text: '' });
+      return;
+    }
+
+    const hCount = (activeProfile.headers ?? []).filter(h => h.enabled && h.name).length;
+    const rCount = (activeProfile.redirects ?? []).filter(r => r.enabled && r.fromUrl && r.toUrl).length;
+    const qCount = (activeProfile.queryParams ?? []).filter(q => q.enabled && ((q.addOrReplace ?? []).some(p => p.key) || (q.remove ?? []).length)).length;
+    const mCount = (activeProfile.mocks ?? []).filter(m => m.enabled && m.urlFilter).length;
+    const total = hCount + rCount + qCount + mCount;
+
+    if (total > 0) {
+      await chrome.action.setBadgeText({ text: String(total) });
+      await chrome.action.setBadgeBackgroundColor({ color: '#10b981' });
+    } else {
+      await chrome.action.setBadgeText({ text: '' });
+    }
+  } catch (err) {
+    console.debug('[HeaderCraft] Badge update error:', err);
   }
 }
 
@@ -229,23 +266,63 @@ async function rebuildRules() {
 
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local') return;
-  if ('profiles' in changes || 'activeProfileId' in changes) rebuildRules();
+  if ('profiles' in changes || 'activeProfileId' in changes) {
+    rebuildRules();
+    updateToolbarBadge();
+  }
 });
 
 chrome.commands.onCommand.addListener(async (command) => {
-  if (command !== 'toggle-active-profile') return;
-  const { profiles = [], activeProfileId = null } = await chrome.storage.local.get([
-    'profiles', 'activeProfileId',
-  ]);
-  const updated = profiles.map(p =>
-    p.id === activeProfileId ? { ...p, enabled: !p.enabled } : p
-  );
-  await chrome.storage.local.set({ profiles: updated });
+  if (command === 'toggle-active-profile') {
+    const { profiles = [], activeProfileId = null } = await chrome.storage.local.get([
+      'profiles', 'activeProfileId',
+    ]);
+    const updated = profiles.map(p =>
+      p.id === activeProfileId ? { ...p, enabled: !p.enabled } : p
+    );
+    await chrome.storage.local.set({ profiles: updated });
+    return;
+  }
+
+  if (command === 'cycle-profile') {
+    const { profiles = [], activeProfileId = null } = await chrome.storage.local.get([
+      'profiles', 'activeProfileId',
+    ]);
+    if (!profiles.length) return;
+    const currentIdx = profiles.findIndex(p => p.id === activeProfileId);
+    const nextIdx    = (currentIdx + 1) % profiles.length;
+    const nextProfile = profiles[nextIdx];
+    // Disable all, enable next
+    const updated = profiles.map((p, i) => ({ ...p, enabled: i === nextIdx }));
+    await chrome.storage.local.set({ profiles: updated, activeProfileId: nextProfile.id });
+    console.log(`[HeaderCraft] Cycled to profile: "${nextProfile.name}"`);
+  }
 });
 
-/** Periodic refresh so {{$uuid}} / {{$timestamp}} values stay fresh. */
-chrome.alarms.onAlarm.addListener(alarm => {
-  if (alarm.name === 'hc-dynamic-refresh') rebuildRules();
+/** Periodic refresh so {{$uuid}} / {{$timestamp}} values stay fresh.
+ *  Also fires auto-disable checks for profiles with autoDisableAt set. */
+chrome.alarms.onAlarm.addListener(async alarm => {
+  if (alarm.name === 'hc-dynamic-refresh') {
+    // Check and execute any pending auto-disable timers
+    const { profiles = [], activeProfileId = null } = await chrome.storage.local.get(['profiles', 'activeProfileId']);
+    const now = Date.now();
+    let changed = false;
+    const updated = profiles.map(p => {
+      if (p.autoDisableAt && p.autoDisableAt <= now) {
+        console.log(`[HeaderCraft] Auto-disabling profile "${p.name}" (timer expired)`);
+        changed = true;
+        const { autoDisableAt: _, ...rest } = p;
+        return { ...rest, enabled: false };
+      }
+      return p;
+    });
+    if (changed) {
+      const newActiveId = updated.find(p => p.enabled)?.id ?? null;
+      await chrome.storage.local.set({ profiles: updated, activeProfileId: newActiveId ?? activeProfileId });
+    } else {
+      rebuildRules();
+    }
+  }
 });
 
 // ── Stateless URL Sharing & Tab Helpers ───────────────────────────────────────
@@ -320,7 +397,7 @@ function createUnifiedExampleProfile() {
   const uid = () => crypto.randomUUID();
   return {
     id: uid(),
-    name: '📖 Example – All Features',
+    name: 'Example – All Features',
     urlFilter: '',
     useRegex: false,
     enabled: false, // Disabled by default for safety; toggle On to test
@@ -440,8 +517,8 @@ async function seedUnifiedExampleProfile() {
 
   if (exampleSeededV3) return;
 
-  // Clean out any legacy "📖 Example" profiles (e.g. from the previous 4-profile scheme)
-  const remaining = existing.filter(p => !p.name?.startsWith('📖 Example'));
+  // Clean out any legacy example profiles (e.g. from the previous 4-profile scheme)
+  const remaining = existing.filter(p => !p.name?.startsWith('📖 Example') && !p.name?.startsWith('Example – All Features'));
   const example = createUnifiedExampleProfile();
   const merged = [example, ...remaining];
 
@@ -459,9 +536,10 @@ chrome.runtime.onInstalled.addListener(async () => {
   await seedUnifiedExampleProfile();
   // Refresh dynamic variable rules every minute (MV3 minimum alarm period)
   await chrome.alarms.create('hc-dynamic-refresh', { periodInMinutes: 1 });
-  console.log('[HeaderCraft] v1.1.2 installed / updated.');
+  await updateToolbarBadge();
+  console.log('[HeaderCraft] v1.3.0 installed / updated.');
 });
 
 // Run once on service worker startup in case installed event was missed
-seedUnifiedExampleProfile();
+seedUnifiedExampleProfile().then(() => updateToolbarBadge());
 

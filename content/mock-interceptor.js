@@ -24,10 +24,21 @@
   // ── Mock store ──────────────────────────────────────────────────────────────
 
   let mocks = [];
+  let consoleLogging = true;
 
   document.addEventListener('__headercraft_mocks__', (e) => {
-    try { mocks = JSON.parse(e.detail) ?? []; }
-    catch (_) { mocks = []; }
+    try {
+      const parsed = JSON.parse(e.detail);
+      if (Array.isArray(parsed)) {
+        mocks = parsed;
+        consoleLogging = true;
+      } else if (parsed && typeof parsed === 'object') {
+        mocks = parsed.mocks ?? [];
+        consoleLogging = parsed.consoleLogging !== false;
+      }
+    } catch (_) {
+      mocks = [];
+    }
   });
 
   function findMock(url, method) {
@@ -59,13 +70,22 @@
   }
 
   function logDevToolsBridge(type, method, url, mock) {
+    if (!consoleLogging) return;
+
+    // Requirement: In-Console Interception Logger
+    console.log(
+      '%c[HeaderCraft] Mocked %s',
+      'background: #059669; color: white; padding: 2px 4px; border-radius: 2px;',
+      url
+    );
+
     const status = mock.statusCode ?? 200;
     const isError = status >= 400;
     const badgeColor = isError ? '#f87171' : '#34d399';
     const badgeBg = isError ? '#450a0a' : '#064e3b';
 
     console.groupCollapsed(
-      `%c[HeaderCraft] ⚡ Intercepted (${type})%c ${method} ${url} %c→ Mocked ${status} OK `,
+      `%c[HeaderCraft] Intercepted (${type})%c ${method} ${url} %c-> Mocked ${status} `,
       'background: #312e81; color: #a5b4fc; font-weight: bold; padding: 2px 6px; border-radius: 3px 0 0 3px;',
       'background: #27272a; color: #f4f4f5; padding: 2px 6px; font-family: monospace;',
       `background: ${badgeBg}; color: ${badgeColor}; font-weight: bold; padding: 2px 6px; border-radius: 0 3px 3px 0;`
@@ -105,10 +125,15 @@
       const mock = findMock(url, method);
       if (mock) {
         logDevToolsBridge('fetch', method, url, mock);
-        return new Response(mock.responseBody ?? '', {
+        const delayMs = mock.delayMs ?? 0;
+        const respond = () => new Response(mock.responseBody ?? '', {
           status:  mock.statusCode  ?? 200,
           headers: buildHeaders(mock),
         });
+        if (delayMs > 0) {
+          return new Promise(resolve => setTimeout(() => resolve(respond()), delayMs));
+        }
+        return respond();
       }
 
       // BUG FIX #3: use the pre-bound _fetch (bound to window at capture time)
@@ -145,6 +170,7 @@
 
         const mock = _mock;
         logDevToolsBridge('XHR', _method, _url, mock);
+        const delayMs = mock.delayMs ?? 0;
 
         setTimeout(() => {
           const define = (key, val) =>
@@ -160,7 +186,7 @@
           xhr.dispatchEvent(new ProgressEvent('readystatechange'));
           xhr.dispatchEvent(new ProgressEvent('load'));
           xhr.dispatchEvent(new ProgressEvent('loadend'));
-        }, 0);
+        }, delayMs > 0 ? delayMs : 0);
       };
 
       return xhr;

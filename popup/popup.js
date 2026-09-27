@@ -29,8 +29,10 @@ function debounce(fn, delay) {
 
 function makeDeleteBtn() {
   const btn = document.createElement('button');
-  btn.className = 'btn-remove-rule';
-  btn.title = 'Remove';
+  btn.className = 'btn-remove-rule has-tooltip';
+  btn.dataset.tooltip = 'Delete rule';
+  btn.setAttribute('aria-label', 'Delete rule');
+  btn.title = 'Delete rule';
   btn.innerHTML = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" width="13" height="13">
     <path d="M3 4h10M6 4V3h4v1M5.5 4v8h5V4" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>`;
@@ -40,9 +42,14 @@ function makeDeleteBtn() {
 function makeInput(cls, placeholder, value = '', mono = false) {
   const el = document.createElement('input');
   el.type = 'text';
-  el.className = (mono ? 'rule-input' : 'rule-input') + (cls ? ' ' + cls : '');
+  el.className = (mono ? 'rule-input mono' : 'rule-input') + (cls ? ' ' + cls : '');
   el.placeholder = placeholder;
   el.value = value;
+  el.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      el.blur();
+    }
+  });
   return el;
 }
 
@@ -61,8 +68,10 @@ function makeSelect(cls, options, selected) {
 
 function makeEnabledDot(checked, onChange) {
   const label = document.createElement('label');
-  label.className = 'rule-enabled-toggle';
-  label.title = 'Enable / disable';
+  label.className = 'rule-enabled-toggle has-tooltip';
+  label.dataset.tooltip = 'Toggle rule active state';
+  label.setAttribute('aria-label', 'Toggle rule active state');
+  label.title = 'Enable / disable rule';
   const input = document.createElement('input');
   input.type = 'checkbox';
   input.checked = checked;
@@ -129,7 +138,552 @@ const rulesContainer        = document.getElementById('rules-container');
 const emptyTabState         = document.getElementById('empty-tab-state');
 const emptyTabMessage       = document.getElementById('empty-tab-message');
 const emptyTabHint          = document.getElementById('empty-tab-hint');
+const btnEmptyAction        = document.getElementById('btn-empty-action');
+const presetsDropdownWrap   = document.getElementById('presets-dropdown-wrap');
+const btnPresets            = document.getElementById('btn-presets');
+const presetsMenu           = document.getElementById('presets-menu');
+const presetsStrip          = document.getElementById('presets-strip');
+const presetsChips          = document.getElementById('presets-chips');
+const emptyPresetsWrapper   = document.getElementById('empty-presets-wrapper');
+const emptyPresetsList      = document.getElementById('empty-presets-list');
+const btnMockLogs           = document.getElementById('btn-mock-logs');
+const mockLogsText          = document.getElementById('mock-logs-text');
 const toast                 = document.getElementById('toast');
+
+// v1.3.0 DOM refs (search bar is built dynamically — see buildRuleSearchBar)
+const autoDisableSelect     = document.getElementById('auto-disable-select');
+const autoDisableCountdown  = document.getElementById('auto-disable-countdown');
+
+// ── Hit Counter State (session-only, reset on profile toggle) ─────────────────
+const hitCounters = {}; // ruleId → count
+function incrementHit(ruleId) {
+  hitCounters[ruleId] = (hitCounters[ruleId] ?? 0) + 1;
+  // Update badge in DOM without full re-render
+  const badge = document.querySelector(`.rule-hit-badge[data-rule-id="${ruleId}"]`);
+  if (badge) {
+    const count = hitCounters[ruleId];
+    badge.querySelector('.hit-count').textContent = count;
+    badge.classList.toggle('has-hits', count > 0);
+  }
+}
+function resetHitCounters() {
+  Object.keys(hitCounters).forEach(k => delete hitCounters[k]);
+}
+
+// ── Auto-Disable Timer ────────────────────────────────────────────────────────
+let autoDisableInterval = null;
+
+function clearAutoDisableTimer() {
+  if (autoDisableInterval) { clearInterval(autoDisableInterval); autoDisableInterval = null; }
+}
+
+async function setAutoDisableTimer(minutes) {
+  clearAutoDisableTimer();
+  const profile = profiles.find(p => p.id === selectedProfileId);
+  if (!profile || !minutes) {
+    if (profile) { delete profile.autoDisableAt; }
+    await saveStorage();
+    autoDisableCountdown?.classList.add('hidden');
+    return;
+  }
+  const fireAt = Date.now() + minutes * 60_000;
+  profile.autoDisableAt = fireAt;
+  await saveStorage();
+  startCountdownDisplay();
+}
+
+function startCountdownDisplay() {
+  clearAutoDisableTimer();
+  const profile = profiles.find(p => p.id === selectedProfileId);
+  if (!profile?.autoDisableAt) {
+    autoDisableCountdown?.classList.add('hidden');
+    return;
+  }
+  function tick() {
+    const remaining = profile.autoDisableAt - Date.now();
+    if (remaining <= 0) {
+      clearAutoDisableTimer();
+      autoDisableCountdown?.classList.add('hidden');
+      // Auto-disable the profile
+      profile.enabled = false;
+      delete profile.autoDisableAt;
+      activeProfileId = profiles.find(p => p.enabled)?.id ?? null;
+      saveStorage().then(() => {
+        renderMainPanel();
+        showToast(`Profile "${profile.name}" auto-disabled`, 'info');
+      });
+      return;
+    }
+    const mins = Math.floor(remaining / 60_000);
+    const secs = Math.floor((remaining % 60_000) / 1000);
+    if (autoDisableCountdown) {
+      autoDisableCountdown.textContent = `${mins}:${secs.toString().padStart(2,'0')} left`;
+      autoDisableCountdown.classList.remove('hidden');
+    }
+  }
+  tick();
+  autoDisableInterval = setInterval(tick, 1000);
+}
+
+// ── Rule Search Filter ────────────────────────────────────────────────────────
+let ruleSearchQuery = '';
+
+/** Build the search bar and inject it as the FIRST child of rulesContainer.
+ *  It's built fresh on each renderTab so it lives inside the scrollable
+ *  container — the only parent where position:sticky works correctly. */
+function buildRuleSearchBar() {
+  const bar = document.createElement('div');
+  bar.className = 'rule-search-bar';
+  bar.id = 'hc-rule-search-bar';
+
+  const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  icon.setAttribute('viewBox', '0 0 16 16');
+  icon.setAttribute('fill', 'none');
+  icon.setAttribute('stroke', 'currentColor');
+  icon.setAttribute('stroke-width', '1.6');
+  icon.setAttribute('width', '12');
+  icon.setAttribute('height', '12');
+  icon.classList.add('rule-search-icon');
+  const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  circle.setAttribute('cx', '6.5'); circle.setAttribute('cy', '6.5'); circle.setAttribute('r', '4');
+  const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  line.setAttribute('d', 'M9.5 9.5 13 13'); line.setAttribute('stroke-linecap', 'round');
+  icon.append(circle, line);
+
+  const input = document.createElement('input');
+  input.className = 'rule-search-input';
+  input.type = 'text';
+  input.placeholder = 'Search rules…';
+  input.autocomplete = 'off';
+  input.spellcheck = false;
+  input.value = ruleSearchQuery; // restore query if switching back to same tab
+
+  const clearBtn = document.createElement('button');
+  clearBtn.className = 'rule-search-clear' + (ruleSearchQuery ? '' : ' hidden');
+  clearBtn.title = 'Clear search';
+  clearBtn.setAttribute('aria-label', 'Clear search');
+  clearBtn.textContent = '\u00d7';
+
+  input.addEventListener('input', () => {
+    ruleSearchQuery = input.value;
+    clearBtn.classList.toggle('hidden', !ruleSearchQuery);
+    applyRuleSearch();
+  });
+
+  clearBtn.addEventListener('click', () => {
+    ruleSearchQuery = '';
+    input.value = '';
+    clearBtn.classList.add('hidden');
+    applyRuleSearch();
+    input.focus();
+  });
+
+  bar.append(icon, input, clearBtn);
+  return bar;
+}
+
+function applyRuleSearch() {
+  const q = ruleSearchQuery.toLowerCase().trim();
+  const cards = rulesContainer.querySelectorAll('.rule-card');
+  let visible = 0;
+  cards.forEach(card => {
+    // Collect static text node text plus form field values (input, select, textarea)
+    let fullText = card.textContent;
+    card.querySelectorAll('input, select, textarea').forEach(el => {
+      fullText += ' ' + (el.value || '');
+    });
+    const text = fullText.toLowerCase();
+    const show = !q || text.includes(q);
+    card.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  // Show/hide "no results" hint inline
+  let noResult = rulesContainer.querySelector('.rule-search-no-result');
+  if (!q || visible > 0) {
+    noResult?.remove();
+  } else if (!noResult) {
+    noResult = document.createElement('p');
+    noResult.className = 'rule-search-no-result';
+    noResult.style.cssText = 'text-align:center;color:var(--text-muted);font-size:12px;padding:24px 0;';
+    noResult.textContent = `No rules matching "${ruleSearchQuery}"`;
+    rulesContainer.appendChild(noResult);
+  } else {
+    noResult.textContent = `No rules matching "${ruleSearchQuery}"`;
+  }
+}
+
+// ── Quick Presets ─────────────────────────────────────────────────────────────
+
+const HEADER_PRESETS = [
+  {
+    id: 'cors',
+    badge: 'RES',
+    badgeType: 'res',
+    name: 'Bypass CORS (All Origins)',
+    shortName: 'CORS',
+    desc: 'Access-Control-Allow-* headers',
+    rules: [
+      { name: 'Access-Control-Allow-Origin', value: '*', operation: 'set', type: 'response' },
+      { name: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, DELETE, PATCH, OPTIONS', operation: 'set', type: 'response' },
+      { name: 'Access-Control-Allow-Headers', value: '*', operation: 'set', type: 'response' },
+      { name: 'Access-Control-Allow-Credentials', value: 'true', operation: 'set', type: 'response' },
+    ],
+  },
+  {
+    id: 'no-cache',
+    badge: 'REQ',
+    badgeType: 'req',
+    name: 'Disable Cache (No-Cache)',
+    shortName: 'No-Cache',
+    desc: 'Force fresh assets & bypass cache',
+    rules: [
+      { name: 'Cache-Control', value: 'no-cache, no-store, must-revalidate', operation: 'set', type: 'request' },
+      { name: 'Pragma', value: 'no-cache', operation: 'set', type: 'request' },
+      { name: 'Expires', value: '0', operation: 'set', type: 'request' },
+    ],
+  },
+  {
+    id: 'strip-csp',
+    badge: 'RES',
+    badgeType: 'strip',
+    name: 'Strip CSP (Security Policy)',
+    shortName: 'Strip CSP',
+    desc: 'Remove CSP headers for script testing',
+    rules: [
+      { name: 'Content-Security-Policy', value: '', operation: 'remove', type: 'response' },
+      { name: 'Content-Security-Policy-Report-Only', value: '', operation: 'remove', type: 'response' },
+      { name: 'X-WebKit-CSP', value: '', operation: 'remove', type: 'response' },
+    ],
+  },
+  {
+    id: 'json-api',
+    badge: 'REQ',
+    badgeType: 'req',
+    name: 'JSON API Request',
+    shortName: 'JSON API',
+    desc: 'Accept & Content-Type: application/json',
+    rules: [
+      { name: 'Accept', value: 'application/json, text/plain, */*', operation: 'set', type: 'request' },
+      { name: 'Content-Type', value: 'application/json', operation: 'set', type: 'request' },
+    ],
+  },
+  {
+    id: 'bearer-auth',
+    badge: 'REQ',
+    badgeType: 'req',
+    name: 'Bearer Auth Token',
+    shortName: 'Bearer Auth',
+    desc: 'Authorization: Bearer <token>',
+    rules: [
+      { name: 'Authorization', value: 'Bearer YOUR_TOKEN_HERE', operation: 'set', type: 'request' },
+    ],
+  },
+  {
+    id: 'mobile-ua',
+    badge: 'REQ',
+    badgeType: 'req',
+    name: 'Mobile User-Agent (iOS)',
+    shortName: 'Mobile UA',
+    desc: 'Emulate iPhone Safari UA & Client Hints',
+    rules: [
+      { name: 'User-Agent', value: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1', operation: 'set', type: 'request' },
+      { name: 'Sec-CH-UA-Mobile', value: '?1', operation: 'set', type: 'request' },
+      { name: 'Sec-CH-UA-Platform', value: '"iOS"', operation: 'set', type: 'request' },
+    ],
+  },
+  {
+    id: 'graphql-headers',
+    badge: 'REQ',
+    badgeType: 'req',
+    name: 'GraphQL Client Headers',
+    shortName: 'GraphQL',
+    desc: 'JSON body with Apollo operation header',
+    rules: [
+      { name: 'Content-Type', value: 'application/json', operation: 'set', type: 'request' },
+      { name: 'X-Apollo-Operation-Name', value: 'HeaderCraftQuery', operation: 'set', type: 'request' },
+    ],
+  },
+];
+
+const PARAM_PRESETS = [
+  {
+    id: 'strip-utm',
+    badge: 'STRIP',
+    badgeType: 'strip',
+    name: 'Strip Tracking & UTM Params',
+    shortName: 'Strip UTMs',
+    desc: 'Remove utm_*, fbclid, gclid, _ga',
+    paramRule: {
+      urlFilter: '',
+      useRegex: false,
+      addOrReplace: [],
+      remove: ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'fbclid', 'gclid', 'mc_eid', '_ga'],
+    },
+  },
+  {
+    id: 'cachebuster',
+    badge: 'PARAM',
+    badgeType: 'param',
+    name: 'Cache-Buster Timestamp',
+    shortName: 'Cache-Buster',
+    desc: 'Append _cb={{$timestamp}} parameter',
+    paramRule: {
+      urlFilter: '',
+      useRegex: false,
+      addOrReplace: [{ key: '_cb', value: '{{$timestamp}}' }],
+      remove: [],
+    },
+  },
+  {
+    id: 'debug-mode',
+    badge: 'PARAM',
+    badgeType: 'param',
+    name: 'Debug & Dev Mode',
+    shortName: 'Debug Mode',
+    desc: 'Append debug=true and env=dev',
+    paramRule: {
+      urlFilter: '',
+      useRegex: false,
+      addOrReplace: [
+        { key: 'debug', value: 'true' },
+        { key: 'env', value: 'dev' },
+      ],
+      remove: [],
+    },
+  },
+  {
+    id: 'feature-flag',
+    badge: 'PARAM',
+    badgeType: 'param',
+    name: 'Feature Flag Test',
+    shortName: 'Feature Flags',
+    desc: 'Append feature_flags=beta_ui, preview=1',
+    paramRule: {
+      urlFilter: '',
+      useRegex: false,
+      addOrReplace: [
+        { key: 'feature_flags', value: 'beta_ui' },
+        { key: 'preview', value: '1' },
+      ],
+      remove: [],
+    },
+  },
+  {
+    id: 'pagination-reset',
+    badge: 'PARAM',
+    badgeType: 'param',
+    name: 'Pagination Reset',
+    shortName: 'Pagination',
+    desc: 'Set page=1 and limit=100',
+    paramRule: {
+      urlFilter: '',
+      useRegex: false,
+      addOrReplace: [
+        { key: 'page', value: '1' },
+        { key: 'limit', value: '100' },
+      ],
+      remove: [],
+    },
+  },
+];
+
+async function applyHeaderPreset(preset) {
+  const profile = profiles.find(p => p.id === selectedProfileId);
+  if (!profile) return;
+
+  profile.headers = profile.headers ?? [];
+  const uid = () => crypto.randomUUID();
+
+  for (const r of preset.rules) {
+    profile.headers.push({
+      id: uid(),
+      enabled: true,
+      name: r.name,
+      value: r.value,
+      operation: r.operation,
+      type: r.type,
+    });
+  }
+
+  await saveStorage();
+  renderTabCounts(profile);
+  renderTab(profile);
+  showToast(`Applied preset: ${preset.name}`, 'success');
+}
+
+async function applyParamPreset(preset) {
+  const profile = profiles.find(p => p.id === selectedProfileId);
+  if (!profile) return;
+
+  profile.queryParams = profile.queryParams ?? [];
+  const uid = () => crypto.randomUUID();
+
+  profile.queryParams.push({
+    id: uid(),
+    enabled: true,
+    urlFilter: preset.paramRule.urlFilter,
+    useRegex: preset.paramRule.useRegex,
+    addOrReplace: preset.paramRule.addOrReplace.map(p => ({ ...p })),
+    remove: [...preset.paramRule.remove],
+  });
+
+  await saveStorage();
+  renderTabCounts(profile);
+  renderTab(profile);
+  showToast(`Applied preset: ${preset.name}`, 'success');
+}
+
+function renderPresetsMenu() {
+  if (!presetsMenu) return;
+  presetsMenu.innerHTML = '';
+
+  const presets = activeTab === 'headers' ? HEADER_PRESETS : activeTab === 'queryparams' ? PARAM_PRESETS : [];
+  if (presets.length === 0) return;
+
+  const titleEl = document.createElement('div');
+  titleEl.className = 'presets-menu-header';
+  titleEl.textContent = activeTab === 'headers' ? 'Header Presets' : 'Query Parameter Presets';
+  presetsMenu.appendChild(titleEl);
+
+  presets.forEach(preset => {
+    const item = document.createElement('button');
+    item.className = 'preset-item';
+    item.type = 'button';
+
+    const badge = document.createElement('span');
+    badge.className = `preset-badge ${preset.badgeType || ''}`;
+    badge.textContent = preset.badge;
+
+    const info = document.createElement('div');
+    info.className = 'preset-info';
+
+    const name = document.createElement('span');
+    name.className = 'preset-name';
+    name.textContent = preset.name;
+
+    const desc = document.createElement('span');
+    desc.className = 'preset-desc';
+    desc.textContent = preset.desc;
+
+    info.append(name, desc);
+    item.append(badge, info);
+
+    item.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      presetsMenu.classList.add('hidden');
+      if (btnPresets) btnPresets.classList.remove('open');
+      if (activeTab === 'headers') {
+        await applyHeaderPreset(preset);
+      } else {
+        await applyParamPreset(preset);
+      }
+    });
+
+    presetsMenu.appendChild(item);
+  });
+}
+
+function renderPresetsStrip() {
+  if (!presetsStrip || !presetsChips) return;
+  const presets = activeTab === 'headers' ? HEADER_PRESETS : activeTab === 'queryparams' ? PARAM_PRESETS : [];
+  if (presets.length === 0) {
+    presetsStrip.classList.add('hidden');
+    return;
+  }
+  presetsStrip.classList.remove('hidden');
+  presetsChips.innerHTML = '';
+
+  presets.forEach(preset => {
+    const chip = document.createElement('button');
+    chip.className = 'preset-chip';
+    chip.type = 'button';
+    chip.title = `${preset.name} - ${preset.desc}`;
+
+    const badge = document.createElement('span');
+    badge.className = `chip-badge ${preset.badgeType || ''}`;
+    badge.textContent = preset.badge;
+
+    const label = document.createElement('span');
+    label.textContent = `+ ${preset.shortName || preset.name}`;
+
+    chip.append(badge, label);
+
+    chip.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (activeTab === 'headers') {
+        await applyHeaderPreset(preset);
+      } else {
+        await applyParamPreset(preset);
+      }
+    });
+
+    presetsChips.appendChild(chip);
+  });
+}
+
+function renderEmptyPresets() {
+  if (!emptyPresetsWrapper || !emptyPresetsList) return;
+  const presets = activeTab === 'headers' ? HEADER_PRESETS : activeTab === 'queryparams' ? PARAM_PRESETS : [];
+  if (presets.length === 0) {
+    emptyPresetsWrapper.classList.add('hidden');
+    return;
+  }
+  emptyPresetsWrapper.classList.remove('hidden');
+  emptyPresetsList.innerHTML = '';
+
+  presets.forEach(preset => {
+    const card = document.createElement('div');
+    card.className = 'empty-preset-card';
+    card.role = 'button';
+    card.tabIndex = 0;
+
+    const left = document.createElement('div');
+    left.className = 'empty-preset-card-left';
+
+    const badge = document.createElement('span');
+    badge.className = `preset-badge ${preset.badgeType || ''}`;
+    badge.textContent = preset.badge;
+
+    const info = document.createElement('div');
+    info.className = 'empty-preset-card-info';
+
+    const name = document.createElement('span');
+    name.className = 'empty-preset-card-name';
+    name.textContent = preset.name;
+
+    const desc = document.createElement('span');
+    desc.className = 'empty-preset-card-desc';
+    desc.textContent = preset.desc;
+
+    info.append(name, desc);
+    left.append(badge, info);
+
+    const action = document.createElement('span');
+    action.className = 'empty-preset-card-btn';
+    action.textContent = '+ Apply';
+
+    card.append(left, action);
+
+    const applyFn = async (e) => {
+      e.stopPropagation();
+      if (activeTab === 'headers') {
+        await applyHeaderPreset(preset);
+      } else {
+        await applyParamPreset(preset);
+      }
+    };
+
+    card.addEventListener('click', applyFn);
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        applyFn(e);
+      }
+    });
+
+    emptyPresetsList.appendChild(card);
+  });
+}
 
 // ── Storage ───────────────────────────────────────────────────────────────────
 
@@ -146,7 +700,7 @@ function createUnifiedExampleProfile() {
   const uid = () => crypto.randomUUID();
   return {
     id: uid(),
-    name: '📖 Example – All Features',
+    name: 'Example – All Features',
     urlFilter: '',
     useRegex: false,
     enabled: false,
@@ -258,8 +812,8 @@ async function loadStorage() {
 
   // If v3 unified example profile has not yet been seeded, or if storage has no profiles at all:
   if (!data.exampleSeededV3 || loadedProfiles.length === 0) {
-    // Strip out any obsolete split "📖 Example – ..." profiles
-    loadedProfiles = loadedProfiles.filter(p => !p.name?.startsWith('📖 Example'));
+    // Strip out any obsolete split example profiles
+    loadedProfiles = loadedProfiles.filter(p => !p.name?.startsWith('📖 Example') && !p.name?.startsWith('Example – All Features'));
     const example = createUnifiedExampleProfile();
     loadedProfiles.unshift(example);
     activeProfileId = data.activeProfileId ?? example.id;
@@ -334,6 +888,23 @@ function renderMainPanel() {
   urlFilterInput.value           = profile.urlFilter;
   useRegexToggle.checked         = profile.useRegex;
 
+  // Sync auto-disable UI
+  if (autoDisableSelect) {
+    autoDisableSelect.value = '0';
+    if (profile.autoDisableAt && profile.autoDisableAt > Date.now()) {
+      const remaining = profile.autoDisableAt - Date.now();
+      // Find closest preset
+      const mins = Math.ceil(remaining / 60_000);
+      const preset = [480, 120, 60, 30, 15].find(m => mins <= m) ?? 0;
+      autoDisableSelect.value = String(preset);
+      startCountdownDisplay();
+    } else {
+      clearAutoDisableTimer();
+      autoDisableCountdown?.classList.add('hidden');
+      if (profile.autoDisableAt) { delete profile.autoDisableAt; }
+    }
+  }
+
   // Isolated Tab Scoping button state
   if (profile.scopedTabId) {
     btnScopeTab.classList.add('scoped');
@@ -348,6 +919,7 @@ function renderMainPanel() {
     btnScopeTab.setAttribute('data-tooltip', 'Scope profile to current active tab only');
   }
 
+  ruleSearchQuery = ''; // Reset search on profile switch
   renderTabCounts(profile);
   renderTab(profile);
   syncTabBar();
@@ -362,15 +934,33 @@ function renderTabCounts(profile) {
 
 function syncTabBar() {
   const TAB_META = {
-    headers:    { label: 'Add Header',   msg: 'No header rules yet.',    hint: 'Click <strong>Add Header</strong> to inject your first header.' },
-    redirects:  { label: 'Add Redirect', msg: 'No redirect rules yet.',  hint: 'Map a production URL to <strong>localhost</strong> with Add Redirect.' },
-    queryparams:{ label: 'Add Param Rule',msg: 'No param rules yet.',    hint: 'Inject, replace, or strip URL query params with Add Param Rule.' },
-    mocks:      { label: 'Add Mock',     msg: 'No mock rules yet.',      hint: 'Intercept any API call and return a <strong>custom response</strong>.' },
+    headers:    { label: 'Add Header',   msg: 'No header rules yet.',    hint: 'Click <strong>Add Header</strong> or select a <strong>Preset</strong>.', action: '+ Add your first header' },
+    redirects:  { label: 'Add Redirect', msg: 'No redirect rules yet.',  hint: 'Map a production URL to <strong>localhost</strong> with Add Redirect.', action: '+ Add your first redirect' },
+    queryparams:{ label: 'Add Param Rule',msg: 'No param rules yet.',    hint: 'Inject, replace, or strip URL query params, or select a <strong>Preset</strong>.', action: '+ Add your first param rule' },
+    mocks:      { label: 'Add Mock',     msg: 'No mock rules yet.',      hint: 'Intercept any API call and return a <strong>custom response</strong>.', action: '+ Add your first mock' },
   };
   const meta = TAB_META[activeTab];
   addRuleLabel.textContent = meta.label;
   emptyTabMessage.textContent = meta.msg;
   emptyTabHint.innerHTML = meta.hint;
+  if (btnEmptyAction) btnEmptyAction.textContent = meta.action;
+
+  // Show presets button on headers and queryparams tabs
+  if (presetsDropdownWrap) {
+    presetsDropdownWrap.style.display = (activeTab === 'headers' || activeTab === 'queryparams') ? '' : 'none';
+  }
+  renderPresetsStrip();
+
+  // Show mock logs toggle only on mocks tab
+  const profile = profiles.find(p => p.id === selectedProfileId);
+  if (btnMockLogs) {
+    if (activeTab === 'mocks') {
+      btnMockLogs.classList.remove('hidden');
+      syncMockLogsBtn(profile);
+    } else {
+      btnMockLogs.classList.add('hidden');
+    }
+  }
 
   tabBtns.forEach(btn => {
     const isActive = btn.dataset.tab === activeTab;
@@ -379,8 +969,18 @@ function syncTabBar() {
   });
 }
 
+function syncMockLogsBtn(profile) {
+  if (!btnMockLogs || !profile) return;
+  const isLogging = profile.consoleLogging !== false;
+  btnMockLogs.classList.toggle('active', isLogging);
+  if (mockLogsText) {
+    mockLogsText.textContent = isLogging ? 'Logs: ON' : 'Logs: OFF';
+  }
+}
+
 function renderTab(profile) {
   rulesContainer.innerHTML = '';
+
   let items;
   switch (activeTab) {
     case 'headers':     items = profile.headers    ?? []; break;
@@ -390,11 +990,23 @@ function renderTab(profile) {
     default:            items = [];
   }
 
+  if (activeTab === 'mocks') {
+    syncMockLogsBtn(profile);
+  }
+
   if (items.length === 0) {
     emptyTabState.classList.remove('hidden');
+    renderEmptyPresets();
+    renderPresetsStrip();
     return;
   }
   emptyTabState.classList.add('hidden');
+
+  // Inject search bar as first child of rules-container when rules exist
+  if (items.length >= 1) {
+    rulesContainer.appendChild(buildRuleSearchBar());
+  }
+  renderPresetsStrip();
 
   for (const item of items) {
     let card;
@@ -403,6 +1015,10 @@ function renderTab(profile) {
     else if (activeTab === 'queryparams') card = buildQueryParamCard(item);
     else                                   card = buildMockCard(item);
     rulesContainer.appendChild(card);
+  }
+
+  if (ruleSearchQuery) {
+    applyRuleSearch();
   }
 }
 
@@ -432,7 +1048,7 @@ function buildHeaderCard(rule) {
   del.addEventListener('click', () => removeRule('headers', rule.id));
   fieldsWrap.append(nameInput, opSelect, valInput, del);
 
-  // Row 2: type chips
+  // Row 2: type chips + hit counter badge
   const typeRow = document.createElement('div');
   typeRow.className = 'rule-type-row';
   for (const t of ['request', 'response']) {
@@ -444,10 +1060,79 @@ function buildHeaderCard(rule) {
     typeRow.appendChild(chip);
   }
 
+  // Hit counter badge
+  const hitCount = hitCounters[rule.id] ?? 0;
+  const hitBadge = document.createElement('span');
+  hitBadge.className = 'rule-hit-badge' + (hitCount > 0 ? ' has-hits' : '');
+  hitBadge.dataset.ruleId = rule.id;
+  hitBadge.title = hitCount > 0 ? `Matched ${hitCount} request(s) this session` : 'No matches yet this session';
+  const hitDot = document.createElement('span');
+  hitDot.className = 'hit-dot';
+  const hitLabel = document.createElement('span');
+  hitLabel.className = 'hit-count';
+  hitLabel.textContent = hitCount;
+  hitBadge.append(hitDot, hitLabel, document.createTextNode(' hits'));
+  typeRow.appendChild(hitBadge);
+
+  // Row 3: note / comment
+  const noteRow = document.createElement('div');
+  noteRow.className = 'rule-note-row';
+
+  const noteToggle = document.createElement('button');
+  noteToggle.className = 'rule-note-toggle' + (rule.note ? ' has-note' : '');
+  noteToggle.title = rule.note ? 'Edit note' : 'Add note';
+  noteToggle.innerHTML = `<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" width="10" height="10"><path d="M2 3h10M2 7h7M2 11h5" stroke-linecap="round"/></svg><span>${rule.note ? 'Note' : 'Add note'}</span>`;
+
+  const noteInput = makeInput('rule-note-input', 'Add a note for this rule…', rule.note ?? '');
+  noteInput.style.display = rule.note ? '' : 'none';
+  noteInput.addEventListener('change', () => {
+    updateRuleField('headers', rule.id, 'note', noteInput.value);
+    noteToggle.className = 'rule-note-toggle' + (noteInput.value ? ' has-note' : '');
+    noteToggle.querySelector('span').textContent = noteInput.value ? 'Note' : 'Add note';
+  });
+  noteToggle.addEventListener('click', () => {
+    const hidden = noteInput.style.display === 'none';
+    noteInput.style.display = hidden ? '' : 'none';
+    if (hidden) noteInput.focus();
+  });
+
+  noteRow.append(noteToggle, noteInput);
+
+  // Row 4: Live URL tester (shown only for header rules with urlFilter context)
+  const testerRow = document.createElement('div');
+  testerRow.className = 'url-tester-row';
+
+  const testerInput = document.createElement('input');
+  testerInput.className = 'url-tester-input';
+  testerInput.type = 'text';
+  testerInput.placeholder = 'Test URL: paste any URL to check if the profile filter matches…';
+  testerInput.setAttribute('aria-label', 'Test URL against profile filter');
+
+  const testerResult = document.createElement('span');
+  testerResult.className = 'url-tester-result';
+
+  testerInput.addEventListener('input', () => {
+    const testUrl = testerInput.value.trim();
+    const profile = profiles.find(p => p.id === selectedProfileId);
+    if (!testUrl || !profile?.urlFilter) {
+      testerResult.className = 'url-tester-result';
+      return;
+    }
+    let matched = false;
+    try {
+      matched = profile.useRegex
+        ? new RegExp(profile.urlFilter).test(testUrl)
+        : testUrl.includes(profile.urlFilter);
+    } catch (_) { matched = false; }
+    testerResult.className = `url-tester-result visible ${matched ? 'match' : 'no-match'}`;
+    testerResult.textContent = matched ? 'Matches' : 'No match';
+  });
+  testerRow.append(testerInput, testerResult);
+
   const topRow = document.createElement('div');
   topRow.className = 'rule-card-header';
   topRow.append(dotLabel, fieldsWrap);
-  card.append(topRow, typeRow);
+  card.append(topRow, typeRow, noteRow, testerRow);
   return card;
 }
 
@@ -624,6 +1309,8 @@ function buildQueryParamCard(rule) {
   removeInput.className = 'qp-remove-input';
   removeInput.placeholder = 'utm_source, utm_medium, fbclid';
   removeInput.value = (rule.remove ?? []).join(', ');
+  removeInput.setAttribute('aria-label', 'Remove parameters');
+  removeInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') removeInput.blur(); });
   removeInput.addEventListener('change', async () => {
     rule.remove = removeInput.value.split(',').map(s => s.trim()).filter(Boolean);
     await saveQpRule();
@@ -680,6 +1367,9 @@ function buildMockCard(rule) {
   statusInput.type = 'number';
   statusInput.min = '100'; statusInput.max = '599';
   statusInput.value = String(rule.statusCode ?? 200);
+  statusInput.title = 'Status code';
+  statusInput.setAttribute('aria-label', 'Status code');
+  statusInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') statusInput.blur(); });
   statusInput.addEventListener('change', () => updateRuleField('mocks', rule.id, 'statusCode', Number(statusInput.value)));
 
   const del = makeDeleteBtn();
@@ -701,6 +1391,12 @@ function buildMockCard(rule) {
   textarea.className = 'mock-textarea';
   textarea.placeholder = '{ "mocked": true, "data": [] }';
   textarea.value = rule.responseBody ?? '';
+  textarea.setAttribute('aria-label', 'Response body');
+  textarea.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      textarea.blur();
+    }
+  });
   textarea.addEventListener('change', () => updateRuleField('mocks', rule.id, 'responseBody', textarea.value));
 
   const ctypeWrap = document.createElement('div');
@@ -724,7 +1420,33 @@ function buildMockCard(rule) {
   bodyRow.append(textarea, ctypeWrap);
   bodyWrap.appendChild(bodyRow);
 
-  card.append(mockTopWrap, bodyWrap);
+  // Response Delay field
+  const delayWrap = document.createElement('div');
+  delayWrap.className = 'mock-delay-wrap';
+
+  const delayLabel = document.createElement('span');
+  delayLabel.className = 'mock-delay-label';
+  delayLabel.textContent = 'Response delay:';
+
+  const delayInput = document.createElement('input');
+  delayInput.className = 'mock-delay-input';
+  delayInput.type = 'number';
+  delayInput.min = '0';
+  delayInput.max = '30000';
+  delayInput.step = '100';
+  delayInput.placeholder = '0';
+  delayInput.value = String(rule.delayMs ?? 0);
+  delayInput.title = 'Delay response by N milliseconds (simulates slow network)';
+  delayInput.setAttribute('aria-label', 'Response delay in milliseconds');
+  delayInput.addEventListener('keydown', e => { if (e.key === 'Enter') delayInput.blur(); });
+  delayInput.addEventListener('change', () => updateRuleField('mocks', rule.id, 'delayMs', Number(delayInput.value)));
+
+  const delayUnit = document.createElement('span');
+  delayUnit.className = 'mock-delay-unit';
+  delayUnit.textContent = 'ms';
+
+  delayWrap.append(delayLabel, delayInput, delayUnit);
+  card.append(mockTopWrap, bodyWrap, delayWrap);
   return card;
 }
 
@@ -866,7 +1588,7 @@ function exportProfile() {
   });
   a.click();
   URL.revokeObjectURL(a.href);
-  showToast('Profile exported ✓', 'success');
+  showToast('Profile exported', 'success');
 }
 
 async function importProfile(e) {
@@ -884,7 +1606,7 @@ async function importProfile(e) {
     if (!imported) { showToast('No valid profiles found', 'error'); return; }
     selectedProfileId = profiles.at(-1).id;
     await saveStorage(); render();
-    showToast(`Imported ${imported} profile${imported > 1 ? 's' : ''} ✓`, 'success');
+    showToast(`Imported ${imported} profile${imported > 1 ? 's' : ''}`, 'success');
   } catch (_) {
     showToast('Invalid JSON file', 'error');
   } finally { e.target.value = ''; }
@@ -985,7 +1707,7 @@ async function importFromModHeader(e) {
     if (!imported) { showToast('No recognisable profiles in file', 'error'); return; }
     selectedProfileId = profiles.at(-1).id;
     await saveStorage(); render();
-    showToast(`Imported ${imported} profile${imported > 1 ? 's' : ''} from ModHeader/Requestly ✓`, 'success');
+    showToast(`Imported ${imported} profile${imported > 1 ? 's' : ''} from ModHeader/Requestly`, 'success');
   } catch (err) {
     showToast('Could not parse file', 'error');
     console.error('[HeaderCraft] ModHeader import error:', err);
@@ -1037,12 +1759,12 @@ async function openShareModal() {
     modalSubtext.textContent = 'No website or server needed. Anyone with this code can click the import button and paste it to instantly clone your profile.';
     modalActionBtn.onclick = async () => {
       await navigator.clipboard.writeText(shareCode);
-      showToast('Share code copied to clipboard! 📋', 'success');
+      showToast('Share code copied to clipboard', 'success');
       closeModal();
     };
     openModal();
     await navigator.clipboard.writeText(shareCode);
-    showToast('Share code copied to clipboard! 📋', 'success');
+    showToast('Share code copied to clipboard', 'success');
   } catch (err) {
     showToast('Failed to generate share code', 'error');
     console.error(err);
@@ -1079,7 +1801,7 @@ function openImportUrlModal() {
       await saveStorage();
       render();
       closeModal();
-      showToast(`Imported "${p.name}" ✓`, 'success');
+      showToast(`Imported "${p.name}"`, 'success');
     } catch (err) {
       showToast('Invalid or corrupted share code', 'error');
       console.error(err);
@@ -1128,7 +1850,7 @@ btnScopeTab.addEventListener('click', async () => {
     profile.scopedTabTitle = title;
     await saveStorage();
     renderMainPanel();
-    showToast(`Scoped to Tab #${tab.id} (${title}) 🎯`, 'success');
+    showToast(`Scoped to Tab #${tab.id} (${title})`, 'success');
   } catch (err) {
     showToast('Failed to scope to tab', 'error');
     console.error(err);
@@ -1137,7 +1859,7 @@ btnScopeTab.addEventListener('click', async () => {
 
 if (btnSeedExample) {
   btnSeedExample.addEventListener('click', async () => {
-    const existing = profiles.find(p => p.name?.startsWith('📖 Example'));
+    const existing = profiles.find(p => p.name?.startsWith('Example – All Features') || p.name?.startsWith('📖 Example'));
     if (existing) {
       selectProfile(existing.id);
       showToast('Switched to Demo Profile', 'info');
@@ -1148,7 +1870,7 @@ if (btnSeedExample) {
     selectedProfileId = example.id;
     await saveStorage();
     render();
-    showToast('Added Demo Profile with all features ✓', 'success');
+    showToast('Added Demo Profile with all features', 'success');
   });
 }
 
@@ -1159,7 +1881,7 @@ btnAddRule.addEventListener('click', addRule);
 
 btnRefreshVars.addEventListener('click', async () => {
   await saveStorage(); // triggers storage.onChanged → SW rebuilds rules
-  showToast('Variables refreshed ✓', 'success');
+  showToast('Variables refreshed', 'success');
 });
 
 btnExport.addEventListener('click', exportProfile);
@@ -1171,6 +1893,7 @@ fileImportModHeader.addEventListener('change', importFromModHeader);
 tabBtns.forEach(btn => {
   btn.addEventListener('click', () => {
     activeTab = btn.dataset.tab;
+    ruleSearchQuery = ''; // Reset search on tab switch
     syncTabBar();
     const profile = profiles.find(p => p.id === selectedProfileId);
     if (profile) renderTab(profile);
@@ -1194,11 +1917,71 @@ profileEnabledToggle.addEventListener('change', () => {
   profileStatusLabel.textContent = enabled ? 'On' : 'Off';
   profileStatusLabel.className = 'status-label ' + (enabled ? 'on' : 'off');
   if (enabled) activeProfileId = selectedProfileId;
+  else resetHitCounters(); // clear hit counters when profile is turned off
   updateActiveProfile('enabled', enabled);
 });
 
 urlFilterInput.addEventListener('change', () => updateActiveProfile('urlFilter', urlFilterInput.value.trim()));
+urlFilterInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    urlFilterInput.blur();
+    updateActiveProfile('urlFilter', urlFilterInput.value.trim());
+  }
+});
 useRegexToggle.addEventListener('change', () => updateActiveProfile('useRegex', useRegexToggle.checked));
+
+// ── Presets Menu Listeners ──
+if (btnPresets && presetsMenu) {
+  btnPresets.addEventListener('click', (e) => {
+    e.stopPropagation();
+    renderPresetsMenu();
+    const isHidden = presetsMenu.classList.toggle('hidden');
+    btnPresets.classList.toggle('open', !isHidden);
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!presetsDropdownWrap?.contains(e.target)) {
+      presetsMenu?.classList.add('hidden');
+      btnPresets.classList.remove('open');
+    }
+  });
+}
+
+// ── Mock Console Logs Toggle Listener ──
+if (btnMockLogs) {
+  btnMockLogs.addEventListener('click', async () => {
+    const profile = profiles.find(p => p.id === selectedProfileId);
+    if (!profile) return;
+    const current = profile.consoleLogging !== false;
+    profile.consoleLogging = !current;
+    await saveStorage();
+    syncMockLogsBtn(profile);
+    showToast(`DevTools console logs ${profile.consoleLogging ? 'enabled' : 'disabled'}`, 'info');
+  });
+}
+
+// ── Empty State Action Listener ──
+if (btnEmptyAction) {
+  btnEmptyAction.addEventListener('click', () => addRule());
+}
+
+// ── Auto-Disable Timer Listener ──
+if (autoDisableSelect) {
+  autoDisableSelect.addEventListener('change', () => {
+    const minutes = parseInt(autoDisableSelect.value, 10) || 0;
+    setAutoDisableTimer(minutes);
+  });
+}
+
+// ── Rule Search Listeners: wired per-instance inside buildRuleSearchBar() ──
+// (no static listeners needed — events are attached at build time)
+
+// ── Hit Counter: listen for rule-match messages from background ──
+chrome.runtime.onMessage.addListener((message) => {
+  if (message.type === 'RULE_HIT' && message.ruleId) {
+    incrementHit(message.ruleId);
+  }
+});
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
@@ -1206,4 +1989,6 @@ useRegexToggle.addEventListener('change', () => updateActiveProfile('useRegex', 
   await loadStorage();
   selectedProfileId = activeProfileId ?? profiles[0]?.id ?? null;
   render();
+  // Resume any active countdown timers
+  startCountdownDisplay();
 })();

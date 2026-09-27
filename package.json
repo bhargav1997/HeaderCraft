@@ -5,7 +5,7 @@
   "main": "generate_icons.js",
   "scripts": {
     "icons": "node generate_icons.js",
-    "zip": "zip -r headercraft.zip . --exclude '*.git*' --exclude 'node_modules/*' --exclude 'package*.json' --exclude 'generate_icons.js' --exclude 'CHROMEWEBSTORE.md' --exclude 'headercraft.zip'"
+    "zip": "rm -f headercraft.zip && zip -r headercraft.zip . -x '*.git*' 'node_modules/*' 'package*.json' 'generate_icons.js' '*.md' '*.zip*' '*.DS_Store*' '*.crx*' '*.pem*' 'scratch/*'"
   },
   "keywords": [],
   "author": "",
