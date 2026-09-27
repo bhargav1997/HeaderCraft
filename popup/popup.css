@@ -46,10 +46,13 @@
 /* ── Reset ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-body {
-  width: 480px;
-  height: 560px;
+html, body {
+  width: 500px;
+  height: 580px;
+  min-height: 580px;
   max-height: 580px;
+  margin: 0;
+  padding: 0;
   font-family: var(--font-sans);
   font-size: 13px;
   color: var(--text-primary);
@@ -58,10 +61,30 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* ── Global Scrollbar & Corner Reset (Eliminates white box in Chromium) ── */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--bg-hover);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-corner {
+  background: transparent !important;
+}
+::-webkit-resizer {
+  background: transparent !important;
+}
+
 /* ── App Shell ── */
 #app {
   display: flex;
   flex-direction: column;
+  width: 100%;
   height: 100%;
   background:
     radial-gradient(ellipse 60% 40% at 80% 0%, rgba(99,102,241,.12) 0%, transparent 65%),
@@ -76,11 +99,11 @@ body {
   justify-content: space-between;
   padding: 10px 16px;
   border-bottom: 1px solid var(--border);
-  background: rgba(22,22,31,.9);
+  background: rgba(22,22,31,.95);
   backdrop-filter: blur(12px);
   flex-shrink: 0;
   position: relative;
-  z-index: 100;
+  z-index: 500;
 }
 
 .brand {
@@ -129,6 +152,8 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
+  z-index: 10;
 }
 
 .sidebar-header {
@@ -256,6 +281,8 @@ body {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  position: relative;
+  z-index: 15;
 }
 
 .main-panel::-webkit-scrollbar { width: 4px; }
@@ -877,20 +904,23 @@ body {
 .rules-container {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 8px;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.rules-container::-webkit-scrollbar { width: 4px; }
+.rules-container::-webkit-scrollbar { width: 4px; height: 4px; }
 .rules-container::-webkit-scrollbar-track { background: transparent; }
 .rules-container::-webkit-scrollbar-thumb { background: var(--bg-hover); border-radius: 4px; }
+.rules-container::-webkit-scrollbar-corner { background: transparent !important; }
 
 /* Old alias kept for header card compatibility */
 .header-rules-list {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 8px;
   display: flex;
   flex-direction: column;
@@ -1063,18 +1093,19 @@ body {
 }
 
 .has-tooltip:hover {
-  z-index: 10001;
+  z-index: 10000;
 }
 
 .has-tooltip::after {
   content: attr(data-tooltip);
   position: absolute;
   top: calc(100% + 7px);
-  right: 0;
+  left: 50%;
+  transform: translateX(-50%) translateY(-3px);
   background: #181824;
   color: var(--text-primary);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
   font-size: 11px;
   font-family: var(--font-sans);
   font-weight: 500;
@@ -1085,14 +1116,53 @@ body {
   pointer-events: none;
   opacity: 0;
   visibility: hidden;
-  transform: translateY(-3px);
   transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
-  z-index: 9999;
+  z-index: 10001;
 }
 
 .has-tooltip:hover::after {
   opacity: 1;
   visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Tooltips near left edges (main panel buttons, etc.): project rightwards to never get cut off by left sidebar */
+.main-panel .has-tooltip::after,
+.scope-tab-btn::after,
+.edit-name-btn::after,
+.presets-btn::after,
+#btn-expand-tab::after,
+#btn-help::after {
+  left: 0;
+  right: auto;
+  transform: translateY(-3px);
+}
+
+.main-panel .has-tooltip:hover::after,
+.scope-tab-btn:hover::after,
+.edit-name-btn:hover::after,
+.presets-btn:hover::after,
+#btn-expand-tab:hover::after,
+#btn-help:hover::after {
+  transform: translateY(0);
+}
+
+/* Tooltips on far right edge: project leftwards */
+.header-actions button:last-child::after,
+.header-actions button:nth-last-child(2)::after,
+.sidebar-header .has-tooltip::after,
+.profile-actions-right .has-tooltip::after,
+.btn-remove-rule::after {
+  left: auto;
+  right: 0;
+  transform: translateY(-3px);
+}
+
+.header-actions button:last-child:hover::after,
+.header-actions button:nth-last-child(2):hover::after,
+.sidebar-header .has-tooltip:hover::after,
+.profile-actions-right .has-tooltip:hover::after,
+.btn-remove-rule:hover::after {
   transform: translateY(0);
 }
 
@@ -1500,7 +1570,7 @@ body {
   pointer-events: none;
   transition: opacity 200ms ease, transform 200ms ease;
   white-space: nowrap;
-  z-index: 100;
+  z-index: 60000;
 }
 
 .toast.show {
@@ -1773,10 +1843,13 @@ body {
   padding: 6px 10px;
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border);
-  flex-shrink: 0;          /* must not be squished by rules-container flex: 1 */
-  position: sticky;
-  top: 0;
-  z-index: 10;
+  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.rule-search-bar.hidden {
+  display: none !important;
 }
 
 .rule-search-icon {
@@ -1980,4 +2053,860 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ══════════════════════════════════════════════
+   v1.4.0 — Full Tab Mode & Help Modal
+   ══════════════════════════════════════════════ */
+
+/* ── Full Tab Mode (when popup.html opens as a standalone tab) ── */
+html.full-tab-mode,
+body.full-tab-mode {
+  width: 100%;
+  height: 100vh;
+  min-height: 100vh;
+  max-height: 100vh;
+  font-size: 14px;
+}
+
+body.full-tab-mode #app {
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+  height: 100vh;
+  box-shadow: 0 0 60px rgba(0,0,0,.3);
+}
+
+/* ── Header ── */
+body.full-tab-mode .app-header {
+  padding: 14px 24px;
+}
+
+body.full-tab-mode .brand-name {
+  font-size: 18px;
+}
+
+body.full-tab-mode .brand-icon {
+  font-size: 22px;
+}
+
+body.full-tab-mode .icon-btn {
+  padding: 7px;
+}
+
+body.full-tab-mode .icon-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ── Sidebar ── */
+body.full-tab-mode .sidebar {
+  width: 220px;
+}
+
+body.full-tab-mode .sidebar-header {
+  padding: 14px 16px 12px;
+}
+
+body.full-tab-mode .sidebar-title {
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+body.full-tab-mode .profile-item {
+  padding: 10px 16px;
+  gap: 10px;
+}
+
+body.full-tab-mode .profile-label {
+  font-size: 13.5px;
+}
+
+body.full-tab-mode .profile-dot {
+  width: 9px;
+  height: 9px;
+}
+
+body.full-tab-mode .sidebar-footer {
+  padding: 12px 14px;
+}
+
+body.full-tab-mode .btn-seed-example {
+  font-size: 12.5px;
+  padding: 8px 12px;
+}
+
+/* ── Profile Config Topbar ── */
+body.full-tab-mode .profile-topbar {
+  padding: 14px 20px 12px;
+  gap: 10px;
+}
+
+body.full-tab-mode .profile-name-input {
+  font-size: 18px;
+}
+
+body.full-tab-mode .status-label {
+  font-size: 12.5px;
+}
+
+body.full-tab-mode .toggle-track {
+  width: 40px;
+  height: 22px;
+}
+
+body.full-tab-mode .toggle-thumb {
+  width: 16px;
+  height: 16px;
+  top: 2px;
+  left: 2px;
+}
+
+body.full-tab-mode .toggle input:checked + .toggle-track .toggle-thumb {
+  transform: translateX(18px);
+}
+
+body.full-tab-mode .scope-tab-btn {
+  font-size: 12.5px;
+  padding: 5px 12px;
+  gap: 6px;
+}
+
+/* ── URL Filter Row ── */
+body.full-tab-mode .field-label {
+  font-size: 11px;
+}
+
+body.full-tab-mode .text-input {
+  font-size: 13.5px;
+  padding: 8px 14px;
+}
+
+body.full-tab-mode .text-input.mono {
+  font-size: 13px;
+}
+
+body.full-tab-mode .regex-badge {
+  font-size: 12.5px;
+  padding: 6px 12px;
+}
+
+/* ── Auto-Disable Timer ── */
+body.full-tab-mode .auto-disable-row select {
+  font-size: 12.5px;
+  padding: 5px 10px;
+}
+
+/* ── Tab Bar ── */
+body.full-tab-mode .tab-bar {
+  border-bottom-width: 2px;
+}
+
+body.full-tab-mode .tab-btn {
+  padding: 10px 8px;
+  font-size: 13px;
+  gap: 6px;
+}
+
+body.full-tab-mode .tab-count {
+  font-size: 11px;
+  padding: 2px 7px;
+  min-width: 20px;
+}
+
+/* ── Tab Toolbar ── */
+body.full-tab-mode .tab-toolbar {
+  padding: 8px 20px;
+  gap: 10px;
+}
+
+body.full-tab-mode .add-rule-btn {
+  font-size: 12.5px;
+  padding: 7px 14px;
+  gap: 6px;
+}
+
+body.full-tab-mode .presets-btn {
+  font-size: 12.5px;
+  padding: 6px 12px;
+}
+
+/* ── Rules Container ── */
+body.full-tab-mode .rules-container {
+  padding: 12px 20px;
+  gap: 10px;
+}
+
+/* ── Rule Cards ── */
+body.full-tab-mode .rule-card {
+  padding: 14px 18px;
+  gap: 10px;
+  border-radius: var(--radius-lg);
+}
+
+body.full-tab-mode .rule-card-header {
+  gap: 10px;
+}
+
+body.full-tab-mode .rule-enabled-dot {
+  width: 10px;
+  height: 10px;
+}
+
+body.full-tab-mode .rule-fields {
+  grid-template-columns: 1fr 100px 1fr auto;
+  gap: 10px;
+}
+
+body.full-tab-mode .rule-input {
+  font-size: 13px;
+  padding: 8px 12px;
+}
+
+body.full-tab-mode .rule-select {
+  font-size: 13px;
+  padding: 8px 8px;
+}
+
+body.full-tab-mode .rule-input::placeholder {
+  font-size: 12.5px;
+}
+
+/* ── Type Chips ── */
+body.full-tab-mode .type-chip {
+  font-size: 11px;
+  padding: 3px 10px;
+}
+
+/* ── Hit Counter Badge ── */
+body.full-tab-mode .rule-hit-badge {
+  font-size: 11.5px;
+  padding: 2px 10px;
+}
+
+/* ── Rule Note ── */
+body.full-tab-mode .rule-note-toggle {
+  font-size: 12px;
+  padding: 4px 10px;
+}
+
+body.full-tab-mode .rule-note-input {
+  font-size: 13px;
+  padding: 7px 12px;
+}
+
+/* ── URL Tester Row ── */
+body.full-tab-mode .url-tester-input {
+  font-size: 12.5px;
+  padding: 7px 12px;
+}
+
+body.full-tab-mode .url-tester-result {
+  font-size: 11.5px;
+}
+
+/* ── Delete Button ── */
+body.full-tab-mode .btn-remove-rule {
+  padding: 6px;
+}
+
+body.full-tab-mode .btn-remove-rule svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ── Presets Strip ── */
+body.full-tab-mode .presets-strip {
+  padding: 6px 20px;
+}
+
+body.full-tab-mode .preset-chip {
+  font-size: 11.5px;
+  padding: 5px 12px;
+}
+
+/* ── Presets Menu ── */
+body.full-tab-mode .presets-menu {
+  max-height: 400px;
+}
+
+body.full-tab-mode .preset-item {
+  padding: 10px 14px;
+}
+
+body.full-tab-mode .preset-item-name {
+  font-size: 13px;
+}
+
+body.full-tab-mode .preset-item-desc {
+  font-size: 11.5px;
+}
+
+/* ── Search Bar ── */
+body.full-tab-mode .rule-search-bar {
+  padding: 8px 14px;
+}
+
+body.full-tab-mode .rule-search-input {
+  font-size: 13px;
+  padding: 6px 10px;
+}
+
+/* ── Empty State ── */
+body.full-tab-mode .empty-tab-state h3 {
+  font-size: 16px;
+}
+
+body.full-tab-mode .empty-tab-state p {
+  font-size: 13px;
+}
+
+body.full-tab-mode .btn-empty-action {
+  font-size: 13px;
+  padding: 8px 18px;
+}
+
+/* ── Modal Cards (in full-tab) ── */
+body.full-tab-mode .modal-card {
+  max-width: 560px;
+  padding: 20px;
+  gap: 16px;
+}
+
+body.full-tab-mode .modal-title {
+  font-size: 16px;
+}
+
+body.full-tab-mode .modal-desc {
+  font-size: 13px;
+}
+
+body.full-tab-mode .modal-input {
+  font-size: 13px;
+  padding: 9px 14px;
+}
+
+body.full-tab-mode .modal-btn {
+  font-size: 13px;
+  padding: 9px 18px;
+}
+
+/* ── Toast ── */
+body.full-tab-mode .toast {
+  font-size: 13px;
+  padding: 10px 20px;
+}
+
+/* ── Tooltips in full-tab: slightly larger ── */
+body.full-tab-mode .has-tooltip::after {
+  font-size: 12px;
+  padding: 6px 12px;
+}
+
+/* ── Expand & Help Button Divider ── */
+#btn-help {
+  margin-right: 6px;
+  position: relative;
+}
+
+#btn-help::before {
+  content: '';
+  position: absolute;
+  right: -5px;
+  top: 4px;
+  bottom: 4px;
+  width: 1px;
+  background: var(--border);
+}
+
+/* ── Help Modal Overrides ── */
+.help-modal-card {
+  max-width: 480px;
+  max-height: 85vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+body.full-tab-mode .help-modal-card {
+  max-width: 640px;
+}
+
+.help-modal-body {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 2px 4px 0;
+}
+
+.help-modal-body::-webkit-scrollbar { width: 4px; }
+.help-modal-body::-webkit-scrollbar-track { background: transparent; }
+.help-modal-body::-webkit-scrollbar-thumb { background: var(--bg-hover); border-radius: 4px; }
+
+.help-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.help-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--accent-light);
+  margin: 0;
+}
+
+.help-section-desc {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* ── Variable & Regex Tables ── */
+.help-var-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+}
+
+.help-var-table thead th {
+  text-align: left;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  padding: 4px 8px 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.help-var-table tbody td {
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(255,255,255,.03);
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+.help-var-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.help-var-table tbody tr:hover {
+  background: rgba(99,102,241,.06);
+}
+
+.help-muted {
+  color: var(--text-secondary);
+  font-size: 10.5px;
+}
+
+/* ── Copy Buttons in Help Modal ── */
+.help-copy-btn {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+
+.help-copy-btn:hover {
+  background: var(--accent-dim);
+  border-color: var(--accent-border);
+  color: var(--accent-light);
+}
+
+.help-copy-btn.copied {
+  background: rgba(74,222,128,.15);
+  border-color: rgba(74,222,128,.3);
+  color: var(--success);
+}
+
+/* ── Tips List ── */
+.help-tips-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.help-tips-list li {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  padding-left: 14px;
+  position: relative;
+}
+
+.help-tips-list li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 7px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.help-tips-list li strong {
+  color: var(--text-primary);
+}
+
+.help-tips-list li code {
+  background: var(--bg-input);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--accent-light);
+}
+
+/* ── Profile Actions Right & Custom Variables Toggle ── */
+.profile-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-vars-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.profile-vars-toggle-btn:hover {
+  background: var(--accent-dim);
+  border-color: var(--accent-border);
+  color: var(--accent-light);
+}
+
+.profile-vars-toggle-btn.active {
+  background: var(--accent-dim);
+  border-color: var(--accent-border);
+  color: var(--accent-light);
+}
+
+.vars-count-badge {
+  background: rgba(99,102,241,.18);
+  border: 1px solid rgba(99,102,241,.3);
+  color: var(--accent-light);
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 600;
+  padding: 0 5px;
+  min-width: 14px;
+  text-align: center;
+}
+
+/* ── Custom Variables Drawer ── */
+.profile-vars-drawer {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.profile-vars-drawer-header,
+.help-section-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.profile-vars-drawer-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.profile-vars-title {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.profile-vars-subtitle {
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.profile-vars-subtitle code {
+  color: var(--accent-light);
+  font-family: var(--font-mono);
+}
+
+.drawer-add-btn,
+.help-add-var-btn {
+  background: var(--accent-dim);
+  border: 1px solid var(--accent-border);
+  color: var(--accent-light);
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+
+.drawer-add-btn:hover,
+.help-add-var-btn:hover {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* ── Custom Variables List & Rows ── */
+.custom-vars-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.custom-var-row {
+  display: grid;
+  grid-template-columns: minmax(110px, 1fr) minmax(130px, 1.2fr) auto auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.custom-var-key-wrap {
+  display: flex;
+  align-items: center;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0 4px;
+  transition: border-color var(--transition);
+}
+
+.custom-var-key-wrap:focus-within {
+  border-color: var(--border-focus);
+}
+
+.var-brace {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  user-select: none;
+}
+
+.custom-var-key-wrap .custom-var-key {
+  border: none;
+  background: transparent;
+  padding: 5px 3px;
+  font-size: 11.5px;
+  color: var(--accent-light);
+  width: 100%;
+}
+
+.custom-var-key-wrap .custom-var-key:focus {
+  outline: none;
+}
+
+.custom-var-val {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 5px 8px;
+  font-size: 11.5px;
+  color: var(--text-primary);
+  width: 100%;
+  transition: border-color var(--transition);
+}
+
+.custom-var-val:focus {
+  outline: none;
+  border-color: var(--border-focus);
+}
+
+.var-action-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  padding: 5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+}
+
+.var-action-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border);
+}
+
+.var-action-btn.var-del-btn:hover {
+  background: rgba(248, 113, 113, 0.12);
+  color: var(--danger);
+  border-color: rgba(248, 113, 113, 0.25);
+}
+
+.var-action-btn.copied {
+  color: var(--success);
+}
+
+/* Full-tab adjustments for custom variables */
+body.full-tab-mode .profile-vars-toggle-btn {
+  font-size: 12.5px;
+  padding: 5px 12px;
+}
+
+body.full-tab-mode .profile-vars-drawer {
+  padding: 14px 16px;
+  gap: 10px;
+}
+
+body.full-tab-mode .custom-var-row {
+  grid-template-columns: minmax(160px, 1fr) minmax(220px, 1.5fr) auto auto;
+  gap: 10px;
+}
+
+body.full-tab-mode .custom-var-key-wrap .custom-var-key,
+body.full-tab-mode .custom-var-val {
+  font-size: 13px;
+  padding: 7px 10px;
+}
+
+/* ── Variables Modal Popup ── */
+.vars-modal-card {
+  max-width: 480px;
+  width: 94%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+body.full-tab-mode .vars-modal-card {
+  max-width: 620px;
+}
+
+.modal-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.vars-profile-badge {
+  font-size: 11px;
+  color: var(--accent-light);
+  background: var(--accent-dim);
+  border: 1px solid var(--accent-border);
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-weight: 500;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vars-modal-body {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 2px 4px 0;
+}
+
+.vars-modal-body::-webkit-scrollbar { width: 4px; }
+.vars-modal-body::-webkit-scrollbar-track { background: transparent; }
+.vars-modal-body::-webkit-scrollbar-thumb { background: var(--bg-hover); border-radius: 4px; }
+
+.vars-modal-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.vars-modal-desc {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.vars-modal-desc code {
+  color: var(--accent-light);
+  font-family: var(--font-mono);
+  background: var(--bg-input);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.vars-builtins-footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 10px;
+  margin-top: 6px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+}
+
+.vars-builtins-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+
+.vars-builtins-footer code {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--accent-light);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  padding: 2px 6px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.vars-builtins-footer code:hover {
+  background: var(--accent-dim);
+  border-color: var(--accent-border);
+}
+
+.vars-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+
 

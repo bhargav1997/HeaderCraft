@@ -22,13 +22,35 @@
 
 // ── Dynamic Variable Resolution ───────────────────────────────────────────────
 
-function resolveDynamicVars(value) {
-  if (!value || !value.includes('{{')) return value;
-  return value
-    .replace(/\{\{\$uuid\}\}/gi,      () => crypto.randomUUID())
-    .replace(/\{\{\$timestamp\}\}/gi, () => String(Date.now()))
-    .replace(/\{\{\$isodate\}\}/gi,   () => new Date().toISOString())
-    .replace(/\{\{\$date\}\}/gi,      () => new Date().toISOString().slice(0, 10));
+function resolveDynamicVars(value, customVars = []) {
+  if (!value || typeof value !== 'string' || !value.includes('{{')) return value;
+  let resolved = value;
+
+  // Built-in dynamic variables
+  if (resolved.includes('{{$')) {
+    resolved = resolved
+      .replace(/\{\{\$uuid\}\}/gi,      () => crypto.randomUUID())
+      .replace(/\{\{\$timestamp\}\}/gi, () => String(Date.now()))
+      .replace(/\{\{\$isodate\}\}/gi,   () => new Date().toISOString())
+      .replace(/\{\{\$date\}\}/gi,      () => new Date().toISOString().slice(0, 10))
+      .replace(/\{\{\$randomInt\}\}/gi, () => String(Math.floor(Math.random() * 90000) + 10000));
+  }
+
+  // Custom profile variables (e.g. {{api_key}}, {{$env}})
+  if (Array.isArray(customVars)) {
+    for (const cv of customVars) {
+      if (cv && cv.key && cv.key.trim()) {
+        const cleanKey = cv.key.replace(/^\{\{|\}\}$/g, '').trim();
+        if (cleanKey) {
+          const escaped = cleanKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regex = new RegExp(`\\{\\{\\s*\\$?${escaped}\\s*\\}\\}`, 'gi');
+          resolved = resolved.replace(regex, cv.value ?? '');
+        }
+      }
+    }
+  }
+
+  return resolved;
 }
 
 // ── Condition Builder ─────────────────────────────────────────────────────────
@@ -66,7 +88,7 @@ function buildHeaderRules(profile, idBase) {
     const entry = {
       header: h.name,
       operation: h.operation ?? 'set',
-      ...(h.operation !== 'remove' && { value: resolveDynamicVars(h.value ?? '') }),
+      ...(h.operation !== 'remove' && { value: resolveDynamicVars(h.value ?? '', profile.customVars) }),
     };
 
     const action = { type: 'modifyHeaders' };
@@ -100,8 +122,8 @@ function buildRedirectRules(profile, idBase) {
   for (const r of profile.redirects ?? []) {
     if (!r.enabled || !r.fromUrl || !r.toUrl) continue;
 
-    // Normalise scheme
-    let toUrl = r.toUrl.trim();
+    // Normalise scheme & resolve variables
+    let toUrl = resolveDynamicVars(r.toUrl.trim(), profile.customVars);
     if (/^localhost(:\d+)?(\/|$)/.test(toUrl)) toUrl = 'http://' + toUrl;
 
     // Skip rules with no valid absolute URL — log clearly so devs can debug
@@ -139,7 +161,13 @@ function buildQueryParamRules(profile, idBase) {
   for (const q of profile.queryParams ?? []) {
     if (!q.enabled) continue;
 
-    const addOrReplaceParams = (q.addOrReplace ?? []).filter(p => p.key?.trim());
+    const addOrReplaceParams = (q.addOrReplace ?? [])
+      .filter(p => p.key?.trim())
+      .map(p => ({
+        key: resolveDynamicVars(p.key.trim(), profile.customVars),
+        value: resolveDynamicVars(p.value ?? '', profile.customVars),
+        ...(p.replaceOnly ? { replaceOnly: true } : {}),
+      }));
     const removeParams       = (q.remove ?? []).filter(Boolean);
 
     if (!addOrReplaceParams.length && !removeParams.length) continue;
@@ -402,11 +430,22 @@ function createUnifiedExampleProfile() {
     useRegex: false,
     enabled: false, // Disabled by default for safety; toggle On to test
 
+    // Custom dynamic variables
+    customVars: [
+      { id: uid(), key: 'api_key', value: 'dev_sec_9938a1f' },
+      { id: uid(), key: 'env', value: 'staging' },
+    ],
+
     // Tab 1: Headers (Auth, UUID session tracking, CORS headers, timestamps)
     headers: [
       {
         id: uid(), enabled: true,
         name: 'Authorization', value: 'Bearer YOUR_TOKEN_HERE',
+        operation: 'set', type: 'request',
+      },
+      {
+        id: uid(), enabled: true,
+        name: 'X-API-Key', value: '{{api_key}}',
         operation: 'set', type: 'request',
       },
       {

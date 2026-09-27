@@ -18,6 +18,17 @@
         <span class="brand-name">HeaderCraft</span>
       </div>
       <div class="header-actions">
+        <button id="btn-expand-tab" class="icon-btn has-tooltip" data-tooltip="Open in full browser tab" aria-label="Expand to full tab">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7">
+            <path d="M12 3h5v5M8 17H3v-5M12 3 8 7M8 17l4-4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button id="btn-help" class="icon-btn has-tooltip" data-tooltip="Help &amp; syntax reference" aria-label="Help and syntax reference">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7">
+            <circle cx="10" cy="10" r="7.5"/>
+            <path d="M7.5 7.5a2.5 2.5 0 0 1 4.5 1.5c0 1.5-2 2-2 3.5M10 15v.01" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
         <button id="btn-share-profile" class="icon-btn has-tooltip" data-tooltip="Share profile via stateless URL link" aria-label="Share profile">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7">
             <path d="M12.5 7.5a3.5 3.5 0 0 1 0 5l-3 3a3.5 3.5 0 0 1-5-5l1.5-1.5M7.5 12.5a3.5 3.5 0 0 1 0-5l3-3a3.5 3.5 0 0 1 5 5L14 11" stroke-linecap="round" stroke-linejoin="round"/>
@@ -138,7 +149,7 @@
               </div>
             </div>
 
-            <!-- Auto-disable timer row -->
+            <!-- Auto-disable timer & profile actions row -->
             <div class="profile-actions-row">
               <div class="auto-disable-wrap">
                 <label class="field-label" for="auto-disable-select">Auto-disable</label>
@@ -152,7 +163,16 @@
                 </select>
                 <span id="auto-disable-countdown" class="auto-disable-countdown hidden"></span>
               </div>
-              <button id="btn-delete-profile" class="danger-btn small">Delete Profile</button>
+              <div class="profile-actions-right">
+                <button id="btn-toggle-profile-vars" class="profile-vars-toggle-btn has-tooltip" data-tooltip="Manage custom dynamic variables" aria-label="Variables">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" width="12" height="12">
+                    <path d="M5 3.5L1.5 8l3.5 4.5M11 3.5L14.5 8l-3.5 4.5M7 12l2-8" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <span>Variables</span>
+                  <span id="profile-vars-count" class="vars-count-badge">0</span>
+                </button>
+                <button id="btn-delete-profile" class="danger-btn small">Delete Profile</button>
+              </div>
             </div>
           </div>
 
@@ -223,6 +243,15 @@
             <div id="presets-chips" class="presets-chips"></div>
           </div>
 
+          <!-- Rule Search Bar (Static header above rules list) -->
+          <div id="rule-search-bar" class="rule-search-bar hidden">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" width="12" height="12" class="rule-search-icon">
+              <circle cx="6.5" cy="6.5" r="4"/>
+              <path d="M9.5 9.5 13 13" stroke-linecap="round"/>
+            </svg>
+            <input id="rule-search-input" class="rule-search-input" type="text" placeholder="Search rules…" autocomplete="off" spellcheck="false" />
+            <button id="rule-search-clear" class="rule-search-clear hidden" title="Clear search" aria-label="Clear search">&times;</button>
+          </div>
 
           <!-- Rules container (re-rendered on tab switch) -->
           <div id="rules-container" class="rules-container"></div>
@@ -284,6 +313,109 @@
             <button id="modal-action-btn" class="modal-btn primary">Copy Link</button>
           </div>
           <p id="modal-subtext" class="modal-subtext">Zero cloud storage. The entire profile is encoded directly in the URL hash for 100% private sharing.</p>
+        </div>
+      </div>
+    </div>
+    <!-- Help & Syntax Reference Modal -->
+    <div id="help-modal" class="modal-backdrop hidden">
+      <div class="modal-card help-modal-card">
+        <div class="modal-header">
+          <h3 class="modal-title">Help &amp; Syntax Reference</h3>
+          <button id="btn-close-help" class="modal-close-btn" title="Close">&times;</button>
+        </div>
+        <div class="help-modal-body">
+
+          <!-- Section 1: Dynamic Variables -->
+          <div class="help-section">
+            <h4 class="help-section-title">Built-in Variables</h4>
+            <p class="help-section-desc">Use these placeholders in any header value. A fresh value is generated per request.</p>
+            <table class="help-var-table">
+              <thead><tr><th>Variable</th><th>Output Example</th><th></th></tr></thead>
+              <tbody>
+                <tr><td class="mono">{{$uuid}}</td><td class="mono help-muted">f47ac10b-58cc-4372-a567-0e02b2c3d479</td><td><button class="help-copy-btn" data-copy="{{$uuid}}">Copy</button></td></tr>
+                <tr><td class="mono">{{$timestamp}}</td><td class="mono help-muted">1719523200</td><td><button class="help-copy-btn" data-copy="{{$timestamp}}">Copy</button></td></tr>
+                <tr><td class="mono">{{$isodate}}</td><td class="mono help-muted">2025-06-28T00:00:00.000Z</td><td><button class="help-copy-btn" data-copy="{{$isodate}}">Copy</button></td></tr>
+                <tr><td class="mono">{{$date}}</td><td class="mono help-muted">2025-06-28</td><td><button class="help-copy-btn" data-copy="{{$date}}">Copy</button></td></tr>
+                <tr><td class="mono">{{$randomInt}}</td><td class="mono help-muted">48261</td><td><button class="help-copy-btn" data-copy="{{$randomInt}}">Copy</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Section 1b: Custom Variables -->
+          <div class="help-section">
+            <div class="help-section-header-row">
+              <h4 class="help-section-title">Custom Variables</h4>
+              <button id="btn-add-custom-var" class="help-add-var-btn" title="Add custom variable">+ Add Variable</button>
+            </div>
+            <p class="help-section-desc">Define your own static key-value variables. Use <code class="mono">{{myVar}}</code> syntax in any header value field.</p>
+            <div id="custom-vars-list" class="custom-vars-list">
+              <!-- Rendered dynamically by JS -->
+            </div>
+            <p class="help-section-desc help-muted" id="custom-vars-hint">No custom variables defined yet. Click "+ Add Variable" to create one.</p>
+          </div>
+
+          <!-- Section 2: Regex Reference -->
+          <div class="help-section">
+            <h4 class="help-section-title">URL Filter &amp; Regex Patterns</h4>
+            <p class="help-section-desc">Use these patterns in the URL Filter field for headers, redirects, and query param rules.</p>
+            <table class="help-var-table">
+              <thead><tr><th>Pattern</th><th>Matches</th></tr></thead>
+              <tbody>
+                <tr><td class="mono">https://api.example.com/v1</td><td>Exact prefix match</td></tr>
+                <tr><td class="mono">*api.staging.com*</td><td>Any URL containing <code>api.staging.com</code></td></tr>
+                <tr><td class="mono">||example.com</td><td>Any scheme/subdomain on <code>example.com</code></td></tr>
+                <tr><td class="mono">^https://api\\.dev\\.com/users/\\d+$</td><td>Regex: user ID endpoint (enable "Regex" toggle)</td></tr>
+                <tr><td class="mono">*?utm_*</td><td>Any URL with UTM query parameters</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Section 3: Core Tips -->
+          <div class="help-section">
+            <h4 class="help-section-title">Core Tips</h4>
+            <ul class="help-tips-list">
+              <li><strong>Mock API rules</strong> intercept <code>fetch()</code> and <code>XMLHttpRequest</code> only. They do not intercept top-level page navigations or <code>&lt;script&gt;</code> tag loads.</li>
+              <li><strong>Bypass CORS:</strong> Add a <em>Response</em> header rule setting <code>Access-Control-Allow-Origin</code> to <code>*</code>. Use the "Bypass CORS" preset for 1-click setup.</li>
+              <li><strong>Tab Scoping:</strong> Click "All Tabs" next to the ON switch to restrict rules to the current tab only. Other tabs remain unaffected.</li>
+              <li><strong>Auto-Disable Timer:</strong> Set a countdown (15m to 8h) to automatically turn off the active profile, preventing accidental token leaks.</li>
+              <li><strong>Hit Counters:</strong> Green pulse dots on rule cards track live request matches during the current session.</li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Custom Dynamic Variables Modal -->
+    <div id="vars-modal" class="modal-backdrop hidden">
+      <div class="modal-card vars-modal-card">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <h3 class="modal-title">Custom Variables</h3>
+            <span id="vars-modal-profile-badge" class="vars-profile-badge">Profile</span>
+          </div>
+          <button id="btn-close-vars-modal" class="modal-close-btn" title="Close">&times;</button>
+        </div>
+        <div class="vars-modal-body">
+          <div class="vars-modal-toolbar">
+            <p class="vars-modal-desc">Define custom static key-value variables. Use <code class="mono">{{variable_name}}</code> in headers, redirects, or query params.</p>
+            <button id="btn-modal-add-var" class="drawer-add-btn" title="Add custom variable">+ Add Variable</button>
+          </div>
+          <div id="vars-modal-list" class="custom-vars-list">
+            <!-- Dynamic variable rows -->
+          </div>
+          <p id="vars-modal-empty-hint" class="help-section-desc help-muted hidden">No custom variables defined yet. Click "+ Add Variable" to define one.</p>
+
+          <div class="vars-builtins-footer">
+            <span class="vars-builtins-label">Built-in:</span>
+            <code class="mono has-tooltip help-copy-code" data-tooltip="Click to copy {{$uuid}}" data-copy="{{$uuid}}">{{$uuid}}</code>
+            <code class="mono has-tooltip help-copy-code" data-tooltip="Click to copy {{$timestamp}}" data-copy="{{$timestamp}}">{{$timestamp}}</code>
+            <code class="mono has-tooltip help-copy-code" data-tooltip="Click to copy {{$isodate}}" data-copy="{{$isodate}}">{{$isodate}}</code>
+            <code class="mono has-tooltip help-copy-code" data-tooltip="Click to copy {{$randomInt}}" data-copy="{{$randomInt}}">{{$randomInt}}</code>
+          </div>
+        </div>
+        <div class="modal-footer vars-modal-footer">
+          <button id="btn-vars-modal-done" class="modal-btn primary">Done</button>
         </div>
       </div>
     </div>

@@ -123,6 +123,26 @@ const modalActionBtn        = document.getElementById('modal-action-btn');
 const modalSubtext          = document.getElementById('modal-subtext');
 const btnCloseModal         = document.getElementById('btn-close-modal');
 
+// Expand-to-Tab & Help DOM refs
+const btnExpandTab          = document.getElementById('btn-expand-tab');
+const btnHelp               = document.getElementById('btn-help');
+const helpModal             = document.getElementById('help-modal');
+const btnCloseHelp          = document.getElementById('btn-close-help');
+const btnAddCustomVar       = document.getElementById('btn-add-custom-var');
+const customVarsList        = document.getElementById('custom-vars-list');
+const customVarsHint        = document.getElementById('custom-vars-hint');
+
+// Profile custom variables modal DOM refs
+const btnToggleProfileVars  = document.getElementById('btn-toggle-profile-vars');
+const profileVarsCount      = document.getElementById('profile-vars-count');
+const varsModal             = document.getElementById('vars-modal');
+const varsModalProfileBadge = document.getElementById('vars-modal-profile-badge');
+const btnCloseVarsModal     = document.getElementById('btn-close-vars-modal');
+const btnVarsModalDone      = document.getElementById('btn-vars-modal-done');
+const btnModalAddVar        = document.getElementById('btn-modal-add-var');
+const varsModalList         = document.getElementById('vars-modal-list');
+const varsModalEmptyHint    = document.getElementById('vars-modal-empty-hint');
+
 const tabBtns               = document.querySelectorAll('.tab-btn');
 const countEls              = {
   headers:    document.getElementById('count-headers'),
@@ -150,7 +170,10 @@ const btnMockLogs           = document.getElementById('btn-mock-logs');
 const mockLogsText          = document.getElementById('mock-logs-text');
 const toast                 = document.getElementById('toast');
 
-// v1.3.0 DOM refs (search bar is built dynamically — see buildRuleSearchBar)
+// v1.3.0 DOM refs
+const ruleSearchBar         = document.getElementById('rule-search-bar');
+const ruleSearchInput       = document.getElementById('rule-search-input');
+const ruleSearchClear       = document.getElementById('rule-search-clear');
 const autoDisableSelect     = document.getElementById('auto-disable-select');
 const autoDisableCountdown  = document.getElementById('auto-disable-countdown');
 
@@ -228,58 +251,22 @@ function startCountdownDisplay() {
 // ── Rule Search Filter ────────────────────────────────────────────────────────
 let ruleSearchQuery = '';
 
-/** Build the search bar and inject it as the FIRST child of rulesContainer.
- *  It's built fresh on each renderTab so it lives inside the scrollable
- *  container — the only parent where position:sticky works correctly. */
-function buildRuleSearchBar() {
-  const bar = document.createElement('div');
-  bar.className = 'rule-search-bar';
-  bar.id = 'hc-rule-search-bar';
+function initRuleSearch() {
+  if (!ruleSearchInput || !ruleSearchClear) return;
 
-  const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  icon.setAttribute('viewBox', '0 0 16 16');
-  icon.setAttribute('fill', 'none');
-  icon.setAttribute('stroke', 'currentColor');
-  icon.setAttribute('stroke-width', '1.6');
-  icon.setAttribute('width', '12');
-  icon.setAttribute('height', '12');
-  icon.classList.add('rule-search-icon');
-  const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-  circle.setAttribute('cx', '6.5'); circle.setAttribute('cy', '6.5'); circle.setAttribute('r', '4');
-  const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  line.setAttribute('d', 'M9.5 9.5 13 13'); line.setAttribute('stroke-linecap', 'round');
-  icon.append(circle, line);
-
-  const input = document.createElement('input');
-  input.className = 'rule-search-input';
-  input.type = 'text';
-  input.placeholder = 'Search rules…';
-  input.autocomplete = 'off';
-  input.spellcheck = false;
-  input.value = ruleSearchQuery; // restore query if switching back to same tab
-
-  const clearBtn = document.createElement('button');
-  clearBtn.className = 'rule-search-clear' + (ruleSearchQuery ? '' : ' hidden');
-  clearBtn.title = 'Clear search';
-  clearBtn.setAttribute('aria-label', 'Clear search');
-  clearBtn.textContent = '\u00d7';
-
-  input.addEventListener('input', () => {
-    ruleSearchQuery = input.value;
-    clearBtn.classList.toggle('hidden', !ruleSearchQuery);
+  ruleSearchInput.addEventListener('input', () => {
+    ruleSearchQuery = ruleSearchInput.value;
+    ruleSearchClear.classList.toggle('hidden', !ruleSearchQuery);
     applyRuleSearch();
   });
 
-  clearBtn.addEventListener('click', () => {
+  ruleSearchClear.addEventListener('click', () => {
     ruleSearchQuery = '';
-    input.value = '';
-    clearBtn.classList.add('hidden');
+    ruleSearchInput.value = '';
+    ruleSearchClear.classList.add('hidden');
     applyRuleSearch();
-    input.focus();
+    ruleSearchInput.focus();
   });
-
-  bar.append(icon, input, clearBtn);
-  return bar;
 }
 
 function applyRuleSearch() {
@@ -689,10 +676,11 @@ function renderEmptyPresets() {
 
 function migrateProfile(p) {
   return {
-    redirects: [], queryParams: [], mocks: [],
+    redirects: [], queryParams: [], mocks: [], customVars: [],
     scopedTabId: null, scopedTabTitle: null,
     ...p,
     headers: p.headers ?? [],
+    customVars: p.customVars ?? [],
   };
 }
 
@@ -705,10 +693,21 @@ function createUnifiedExampleProfile() {
     useRegex: false,
     enabled: false,
 
+    // Custom Dynamic Variables
+    customVars: [
+      { id: uid(), key: 'api_key', value: 'dev_sec_9938a1f' },
+      { id: uid(), key: 'env', value: 'staging' },
+    ],
+
     headers: [
       {
         id: uid(), enabled: true,
         name: 'Authorization', value: 'Bearer YOUR_TOKEN_HERE',
+        operation: 'set', type: 'request',
+      },
+      {
+        id: uid(), enabled: true,
+        name: 'X-API-Key', value: '{{api_key}}',
         operation: 'set', type: 'request',
       },
       {
@@ -920,7 +919,10 @@ function renderMainPanel() {
   }
 
   ruleSearchQuery = ''; // Reset search on profile switch
+  if (ruleSearchInput) ruleSearchInput.value = '';
+  if (ruleSearchClear) ruleSearchClear.classList.add('hidden');
   renderTabCounts(profile);
+  renderCustomVars(profile);
   renderTab(profile);
   syncTabBar();
 }
@@ -995,6 +997,7 @@ function renderTab(profile) {
   }
 
   if (items.length === 0) {
+    if (ruleSearchBar) ruleSearchBar.classList.add('hidden');
     emptyTabState.classList.remove('hidden');
     renderEmptyPresets();
     renderPresetsStrip();
@@ -1002,9 +1005,10 @@ function renderTab(profile) {
   }
   emptyTabState.classList.add('hidden');
 
-  // Inject search bar as first child of rules-container when rules exist
-  if (items.length >= 1) {
-    rulesContainer.appendChild(buildRuleSearchBar());
+  if (ruleSearchBar) {
+    ruleSearchBar.classList.remove('hidden');
+    if (ruleSearchInput) ruleSearchInput.value = ruleSearchQuery;
+    if (ruleSearchClear) ruleSearchClear.classList.toggle('hidden', !ruleSearchQuery);
   }
   renderPresetsStrip();
 
@@ -1546,7 +1550,7 @@ async function addProfile() {
   const p = {
     id: crypto.randomUUID(), name: 'New Profile',
     urlFilter: '', useRegex: false, enabled: false,
-    headers: [], redirects: [], queryParams: [], mocks: [],
+    headers: [], redirects: [], queryParams: [], mocks: [], customVars: [],
   };
   profiles.push(p);
   selectedProfileId = p.id;
@@ -1894,6 +1898,8 @@ tabBtns.forEach(btn => {
   btn.addEventListener('click', () => {
     activeTab = btn.dataset.tab;
     ruleSearchQuery = ''; // Reset search on tab switch
+    if (ruleSearchInput) ruleSearchInput.value = '';
+    if (ruleSearchClear) ruleSearchClear.classList.add('hidden');
     syncTabBar();
     const profile = profiles.find(p => p.id === selectedProfileId);
     if (profile) renderTab(profile);
@@ -1983,9 +1989,297 @@ chrome.runtime.onMessage.addListener((message) => {
   }
 });
 
+// ── Custom Dynamic Variables ─────────────────────────────────────────────────
+
+const saveStorageDebounced = debounce(() => saveStorage(), 300);
+
+function openVarsModal() {
+  const profile = profiles.find(p => p.id === selectedProfileId);
+  if (!profile) return;
+  if (varsModalProfileBadge) {
+    varsModalProfileBadge.textContent = profile.name || 'Profile';
+  }
+  renderCustomVars(profile);
+  if (varsModal) varsModal.classList.remove('hidden');
+}
+
+function closeVarsModal() {
+  if (varsModal) varsModal.classList.add('hidden');
+}
+
+function renderCustomVars(profile) {
+  if (!profile) return;
+  if (!profile.customVars) profile.customVars = [];
+
+  // Update badge count
+  if (profileVarsCount) {
+    profileVarsCount.textContent = String(profile.customVars.length);
+  }
+
+  // Render variables modal list
+  if (varsModalList) {
+    varsModalList.innerHTML = '';
+    for (const v of profile.customVars) {
+      varsModalList.appendChild(buildCustomVarRow(profile, v, false));
+    }
+  }
+  if (varsModalEmptyHint) {
+    varsModalEmptyHint.classList.toggle('hidden', profile.customVars.length > 0);
+  }
+
+  // Render help modal list
+  if (customVarsList) {
+    customVarsList.innerHTML = '';
+    for (const v of profile.customVars) {
+      customVarsList.appendChild(buildCustomVarRow(profile, v, true));
+    }
+  }
+  if (customVarsHint) {
+    customVarsHint.classList.toggle('hidden', profile.customVars.length > 0);
+  }
+}
+
+function buildCustomVarRow(profile, v, isHelpModal = false) {
+  const row = document.createElement('div');
+  row.className = 'custom-var-row';
+  row.dataset.varId = v.id;
+
+  const keyWrap = document.createElement('div');
+  keyWrap.className = 'custom-var-key-wrap';
+
+  const braceL = document.createElement('span');
+  braceL.className = 'var-brace';
+  braceL.textContent = '{{';
+
+  const keyInput = document.createElement('input');
+  keyInput.type = 'text';
+  keyInput.className = 'custom-var-key mono';
+  keyInput.placeholder = 'var_name';
+  keyInput.value = v.key ?? '';
+  keyInput.spellcheck = false;
+
+  const braceR = document.createElement('span');
+  braceR.className = 'var-brace';
+  braceR.textContent = '}}';
+
+  keyWrap.append(braceL, keyInput, braceR);
+
+  const valInput = document.createElement('input');
+  valInput.type = 'text';
+  valInput.className = 'custom-var-val mono';
+  valInput.placeholder = 'value';
+  valInput.value = v.value ?? '';
+  valInput.spellcheck = false;
+
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'var-action-btn var-copy-btn has-tooltip';
+  copyBtn.setAttribute('data-tooltip', `Copy {{${v.key || 'var'}}}`);
+  copyBtn.setAttribute('aria-label', 'Copy variable');
+  copyBtn.innerHTML = `
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" width="12" height="12">
+      <rect x="5" y="5" width="8" height="8" rx="1.5"/>
+      <path d="M3 11V3h8" stroke-linecap="round"/>
+    </svg>`;
+
+  const delBtn = document.createElement('button');
+  delBtn.className = 'var-action-btn var-del-btn has-tooltip';
+  delBtn.setAttribute('data-tooltip', 'Delete variable');
+  delBtn.setAttribute('aria-label', 'Delete variable');
+  delBtn.innerHTML = `
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" width="12" height="12">
+      <path d="M3 4h10M6 4V2h4v2M5 7v5M8 7v5M11 7v5M4 4l.8 9.2A1.5 1.5 0 006.3 14h3.4a1.5 1.5 0 001.5-1.3L12 4" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+
+  // Real-time synchronization & debounced save
+  keyInput.addEventListener('input', () => {
+    v.key = keyInput.value.replace(/[{}$]/g, '').trim();
+    copyBtn.setAttribute('data-tooltip', `Copy {{${v.key || 'var'}}}`);
+    syncVarInput(v.id, '.custom-var-key', keyInput.value);
+    saveStorageDebounced();
+  });
+
+  valInput.addEventListener('input', () => {
+    v.value = valInput.value;
+    syncVarInput(v.id, '.custom-var-val', valInput.value);
+    saveStorageDebounced();
+  });
+
+  copyBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const token = `{{${v.key || 'var'}}}`;
+    navigator.clipboard.writeText(token).then(() => {
+      copyBtn.classList.add('copied');
+      showToast(`Copied ${token}`, 'success');
+      setTimeout(() => copyBtn.classList.remove('copied'), 1500);
+    });
+  });
+
+  delBtn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    profile.customVars = (profile.customVars || []).filter(item => item.id !== v.id);
+    await saveStorage();
+    renderCustomVars(profile);
+    showToast('Variable deleted', 'info');
+  });
+
+  row.append(keyWrap, valInput, copyBtn, delBtn);
+  return row;
+}
+
+function syncVarInput(varId, selector, newVal) {
+  const allMatching = document.querySelectorAll(`.custom-var-row[data-var-id="${varId}"] ${selector}`);
+  allMatching.forEach(el => {
+    if (el !== document.activeElement && el.value !== newVal) {
+      el.value = newVal;
+    }
+  });
+}
+
+async function addCustomVar(profile) {
+  if (!profile) return;
+  if (!profile.customVars) profile.customVars = [];
+  const newVar = {
+    id: crypto.randomUUID(),
+    key: '',
+    value: '',
+  };
+  profile.customVars.push(newVar);
+  await saveStorage();
+  renderCustomVars(profile);
+
+  // Focus key input
+  setTimeout(() => {
+    const activeList = (varsModal && !varsModal.classList.contains('hidden'))
+      ? varsModalList
+      : customVarsList;
+    const input = activeList?.querySelector(`[data-var-id="${newVar.id}"] .custom-var-key`);
+    if (input) input.focus();
+  }, 50);
+}
+
+if (btnToggleProfileVars) {
+  btnToggleProfileVars.addEventListener('click', openVarsModal);
+}
+
+if (btnCloseVarsModal) {
+  btnCloseVarsModal.addEventListener('click', closeVarsModal);
+}
+
+if (btnVarsModalDone) {
+  btnVarsModalDone.addEventListener('click', closeVarsModal);
+}
+
+if (btnModalAddVar) {
+  btnModalAddVar.addEventListener('click', () => {
+    const profile = profiles.find(p => p.id === selectedProfileId);
+    if (profile) addCustomVar(profile);
+  });
+}
+
+if (btnAddCustomVar) {
+  btnAddCustomVar.addEventListener('click', () => {
+    const profile = profiles.find(p => p.id === selectedProfileId);
+    if (profile) addCustomVar(profile);
+  });
+}
+
+if (varsModal) {
+  // Close on backdrop click
+  varsModal.addEventListener('click', (e) => {
+    if (e.target === varsModal) closeVarsModal();
+  });
+
+  // Click-to-Copy tokens inside vars modal
+  varsModal.addEventListener('click', (e) => {
+    const copyTarget = e.target.closest('[data-copy]');
+    if (!copyTarget || copyTarget.closest('.var-copy-btn')) return;
+    const text = copyTarget.dataset.copy;
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      showToast(`Copied ${text}`, 'success');
+    });
+  });
+}
+
+// ── Expand to Full Tab ───────────────────────────────────────────────────────
+
+/** Detect if we are already running in a full browser tab (not a popup). */
+function isFullTabMode() {
+  const hasParam = new URLSearchParams(window.location.search).has('fullTab');
+  const isPopup = window.innerWidth <= 600 && window.innerHeight <= 620;
+  return hasParam || (!isPopup && window.innerWidth > 600);
+}
+
+function initFullTabMode() {
+  if (isFullTabMode()) {
+    document.documentElement.classList.add('full-tab-mode');
+    document.body.classList.add('full-tab-mode');
+    if (btnExpandTab) btnExpandTab.style.display = 'none';
+  }
+}
+
+if (btnExpandTab) {
+  btnExpandTab.addEventListener('click', () => {
+    const url = chrome.runtime.getURL('popup/popup.html') + '?fullTab=1';
+    chrome.tabs.create({ url });
+    window.close();
+  });
+}
+
+// ── Help & Syntax Reference Modal ────────────────────────────────────────────
+
+function openHelpModal() {
+  if (helpModal) helpModal.classList.remove('hidden');
+}
+
+function closeHelpModal() {
+  if (helpModal) helpModal.classList.add('hidden');
+}
+
+if (btnHelp) {
+  btnHelp.addEventListener('click', openHelpModal);
+}
+
+if (btnCloseHelp) {
+  btnCloseHelp.addEventListener('click', closeHelpModal);
+}
+
+if (helpModal) {
+  // Close on backdrop click
+  helpModal.addEventListener('click', (e) => {
+    if (e.target === helpModal) closeHelpModal();
+  });
+
+  // Close on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (varsModal && !varsModal.classList.contains('hidden')) closeVarsModal();
+      if (helpModal && !helpModal.classList.contains('hidden')) closeHelpModal();
+    }
+  });
+
+  // Click-to-Copy buttons inside help modal
+  helpModal.addEventListener('click', (e) => {
+    const copyBtn = e.target.closest('.help-copy-btn');
+    if (!copyBtn) return;
+    const text = copyBtn.dataset.copy;
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      copyBtn.textContent = 'Copied!';
+      copyBtn.classList.add('copied');
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy';
+        copyBtn.classList.remove('copied');
+      }, 1500);
+    });
+  });
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 (async () => {
+  initFullTabMode();
+  initRuleSearch();
   await loadStorage();
   selectedProfileId = activeProfileId ?? profiles[0]?.id ?? null;
   render();

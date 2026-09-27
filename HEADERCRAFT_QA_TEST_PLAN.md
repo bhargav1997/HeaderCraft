@@ -209,12 +209,59 @@
 
 ---
 
+### Test Case 14: Custom Dynamic Variables
+**Goal:** Verify users can define static key-value variables and reference them via `{{var_name}}`.
+
+- **Step 1:** In the profile topbar, click the **Variables** button (shows current count `Variables 0` or `Variables 2`).
+  - **Result:** A dedicated **Custom Variables** modal popup dialog opens displaying the active profile name badge and variables list.
+- **Step 2:** Click **+ Add Variable**.
+  - **Result:** A new variable row appears with `{` `}` around the name field and an input for value.
+- **Step 3:** Enter variable name: `tenant_id` and value: `acme_corp_42`.
+- **Step 4:** Click the Copy icon on the variable row.
+  - **Result:** Toast shows "Copied {{tenant_id}}" and button indicates "Copied!".
+- **Step 5:** Click **Done** or press `Escape` to close the modal popup.
+  - **Result:** The modal closes and the button badge updates to `Variables 1` (or count).
+- **Step 6:** Add a Header rule: Name `X-Tenant-ID`, Value `{{tenant_id}}`.
+- **Step 7:** Turn profile ON and navigate to `https://httpbin.org/headers`.
+  - **Result:** The outgoing request header `X-Tenant-ID` is sent as `acme_corp_42`.
+- **Expected Result:** Custom variables resolve dynamically across headers, redirects, and query parameters.
+
+---
+
+### Test Case 15: Expand to Full Tab (Pop-Out Mode)
+**Goal:** Verify opening HeaderCraft in a full browser tab for responsive wide-screen editing.
+
+- **Step 1:** In the top header bar, click the **Expand** button (⤢ pop-out icon).
+  - **Result:** A new full browser tab opens at `chrome-extension://.../popup/popup.html?fullTab=1`, and the popup window closes.
+- **Step 2:** Notice the layout in the tab:
+  - **Result:** Responsive spacious layout, wider cards, larger inputs, and the Expand button is hidden since you are already in a tab.
+- **Step 3:** Make a change (add a rule or toggle profile).
+  - **Result:** Saves immediately and persists when reopening the regular popup.
+- **Expected Result:** Full Tab mode works seamlessly with responsive typography and full control.
+
+---
+
+### Test Case 16: In-App Help & Syntax Reference Modal
+**Goal:** Verify the in-app help modal provides dynamic variables reference and regex syntax.
+
+- **Step 1:** Click the **?** (Help) button in the top header.
+  - **Result:** A dark modal overlay opens titled "Help & Syntax Reference".
+- **Step 2:** Click the "Copy" button next to `{{$uuid}}`.
+  - **Result:** Button changes to "Copied!" and copies `{{$uuid}}` to clipboard.
+- **Step 3:** Under "Custom Variables", verify your custom variables are listed and can be added/edited directly from the modal.
+- **Step 4:** Press the `Escape` key (or click outside the card).
+  - **Result:** Modal closes cleanly.
+- **Expected Result:** Help and syntax reference is easily accessible with working copy actions.
+
+---
+
 ## ✅ QA Sign-Off Criteria
 
 Before approving for Chrome Web Store release, confirm:
-1. All 13 test cases pass with expected results.
+1. All 16 test cases pass with expected results.
 2. No errors or red warning messages appear in Chrome Developer Tools (`F12` console).
 3. The popup opens in under 100 milliseconds.
 4. Memory usage remains low and stable.
 
 *Test Plan Created & Verified for HeaderCraft v1.3.0 Release Candidate.*
+

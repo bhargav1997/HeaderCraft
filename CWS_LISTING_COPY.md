@@ -41,7 +41,9 @@ Designed from the ground up on Chrome’s secure Manifest V3 engine (`declarativ
 * Modify headers on the fly: Set, Append, or Remove any request or response header.
 * Bypass CORS instantly (`Access-Control-Allow-Origin: *`, `Access-Control-Allow-Methods`).
 * Inject `Authorization: Bearer <token>` or custom headers for staging and production testing.
-* Inject Dynamic Variables: Use `{{$uuid}}`, `{{$timestamp}}`, and `{{$randomInt}}` to generate fresh data on every request.
+* Inject Dynamic & Custom Variables: Use built-in dynamic tokens (`{{$uuid}}`, `{{$timestamp}}`, `{{$isodate}}`, `{{$date}}`, `{{$randomInt}}`) or define custom key-value variables (`{{api_key}}`, `{{env}}`) to substitute values across headers, redirects, and query parameters.
+* Expand to Full Tab: One-click pop-out to a full responsive browser tab with optimized spacious viewports for multi-monitor developer workflows.
+* In-App Syntax & Help Reference: Interactive guide with one-click copy buttons for variables and regex patterns.
 * Live Hit Counters: View real-time match counters on rule cards during active sessions.
 
 **2. URL Redirects & Dev Server Rewriting**
