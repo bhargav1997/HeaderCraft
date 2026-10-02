@@ -29,12 +29,22 @@
             <path d="M7.5 7.5a2.5 2.5 0 0 1 4.5 1.5c0 1.5-2 2-2 3.5M10 15v.01" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
+        <button id="btn-cookie-vault" class="icon-btn has-tooltip" data-tooltip="Cookie Vault (Per-domain session cookie store)" aria-label="Cookie Vault">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7">
+            <circle cx="10" cy="10" r="7.5"/>
+            <circle cx="7.5" cy="8" r="1.1" fill="currentColor"/>
+            <circle cx="12.5" cy="8" r="1.1" fill="currentColor"/>
+            <circle cx="10" cy="12.5" r="1.1" fill="currentColor"/>
+            <circle cx="13.5" cy="12" r="0.8" fill="currentColor"/>
+            <circle cx="6.5" cy="12" r="0.8" fill="currentColor"/>
+          </svg>
+        </button>
         <button id="btn-share-profile" class="icon-btn has-tooltip" data-tooltip="Share profile via stateless URL link" aria-label="Share profile">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7">
             <path d="M12.5 7.5a3.5 3.5 0 0 1 0 5l-3 3a3.5 3.5 0 0 1-5-5l1.5-1.5M7.5 12.5a3.5 3.5 0 0 1 0-5l3-3a3.5 3.5 0 0 1 5 5L14 11" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
-        <button id="btn-import-url" class="icon-btn has-tooltip" data-tooltip="Import from Share Link / Code" aria-label="Import from link">
+        <button id="btn-import-hub" class="icon-btn has-tooltip" data-tooltip="Import Hub (cURL, Postman, ModHeader, JSON)" aria-label="Import Hub">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7">
             <path d="M4 14v3h12v-3M10 14V5m0 0 3 3m-3-3L7 8" stroke-linecap="round" stroke-linejoin="round"/>
             <circle cx="15" cy="5" r="2.5" fill="currentColor"/>
@@ -45,7 +55,7 @@
             <path d="M4 14v3h12v-3M10 3v9m0 0L7 9m3 3 3-3" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
-        <button id="btn-import" class="icon-btn has-tooltip" data-tooltip="Import HeaderCraft profile JSON" aria-label="Import HeaderCraft profile">
+        <button id="btn-import" class="icon-btn has-tooltip" data-tooltip="Import HeaderCraft / Postman JSON file" aria-label="Import HeaderCraft or Postman JSON">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7">
             <path d="M4 14v3h12v-3M10 14V5m0 0 3 3m-3-3L7 8" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
@@ -56,21 +66,71 @@
           </svg>
         </button>
       </div>
-      <input type="file" id="file-import-input" accept=".json" style="display:none" />
-      <input type="file" id="file-import-modheader" accept=".json" style="display:none" />
+      <input type="file" id="file-import-input" accept=".json,.txt" style="display:none" />
+      <input type="file" id="file-import-modheader" accept=".json,.txt" style="display:none" />
     </header>
 
     <!-- Layout -->
     <div class="layout">
       <!-- Profile Sidebar -->
       <aside class="sidebar">
-        <div class="sidebar-header">
-          <span class="sidebar-title">Profiles</span>
-          <button id="btn-add-profile" class="icon-btn small has-tooltip" data-tooltip="Create new profile" aria-label="Create new profile">
-            <svg viewBox="0 0 20 20" fill="currentColor">
-              <path d="M10 4a1 1 0 011 1v4h4a1 1 0 110 2h-4v4a1 1 0 11-2 0v-4H5a1 1 0 110-2h4V5a1 1 0 011-1z"/>
+        <!-- Workspace Switcher Bar -->
+        <div class="workspace-bar">
+          <button id="btn-workspace-switcher" class="workspace-switcher-btn" type="button" title="Switch or manage workspaces">
+            <span class="workspace-btn-left">
+              <svg class="workspace-icon" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5v-3zM2.5 2a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3zm6.5.5A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5v-3zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3zM1 10.5A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5v-3zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3zm6.5.5A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5v-3zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3z"/>
+              </svg>
+              <span id="current-workspace-name" class="workspace-name-text">Personal</span>
+            </span>
+            <svg class="workspace-arrow-svg" viewBox="0 0 16 16" fill="currentColor">
+              <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
             </svg>
           </button>
+          <div id="workspace-dropdown" class="workspace-dropdown hidden">
+            <div class="workspace-dropdown-header">
+              <span>WORKSPACES</span>
+            </div>
+            <ul id="workspace-list" class="workspace-list"></ul>
+            <div class="workspace-dropdown-actions">
+              <button id="btn-create-workspace" class="workspace-action-item" type="button">
+                <svg class="workspace-action-icon" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M8 2a.75.75 0 0 1 .75.75v4.5h4.5a.75.75 0 0 1 0 1.5h-4.5v4.5a.75.75 0 0 1-1.5 0v-4.5h-4.5a.75.75 0 0 1 0-1.5h4.5v-4.5A.75.75 0 0 1 8 2z"/>
+                </svg>
+                <span>New Workspace</span>
+              </button>
+              <button id="btn-rename-workspace" class="workspace-action-item" type="button">
+                <svg class="workspace-action-icon" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/>
+                </svg>
+                <span>Rename Current</span>
+              </button>
+              <button id="btn-delete-workspace" class="workspace-action-item danger" type="button">
+                <svg class="workspace-action-icon" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                  <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                </svg>
+                <span>Delete Workspace</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="sidebar-header">
+          <span class="sidebar-title">Profiles</span>
+          <div class="sidebar-actions">
+            <button id="btn-add-folder" class="icon-btn small has-tooltip" data-tooltip="Create new folder" aria-label="Create new folder">
+              <svg viewBox="0 0 16 16" fill="currentColor" width="12" height="12">
+                <path d="M.5 3l.04.87a1.99 1.99 0 0 0-.342 1.311l.637 7A2 2 0 0 0 2.826 14H13.17a2 2 0 0 0 1.991-1.819l.637-7A2 2 0 0 0 13.81 3H9.828a2 2 0 0 1-1.414-.586l-.828-.828A2 2 0 0 0 6.172 1H2.5a2 2 0 0 0-2 2zm1 0a1 1 0 0 1 1-1h3.672a1 1 0 0 1 .707.293l.828.828A3 3 0 0 0 9.828 4h3.982a1 1 0 0 1 .99 1.09l-.637 7a1 1 0 0 1-.996.91H2.826a1 1 0 0 1-.996-.91l-.637-7A1 1 0 0 1 1.5 3z"/>
+                <path d="M8 6.5a.5.5 0 0 1 .5.5v1.5H10a.5.5 0 0 1 0 1H8.5V11a.5.5 0 0 1-1 0V9.5H6a.5.5 0 0 1 0-1h1.5V7a.5.5 0 0 1 .5-.5z"/>
+              </svg>
+            </button>
+            <button id="btn-add-profile" class="icon-btn small has-tooltip" data-tooltip="Create new profile" aria-label="Create new profile">
+              <svg viewBox="0 0 20 20" fill="currentColor">
+                <path d="M10 4a1 1 0 011 1v4h4a1 1 0 110 2h-4v4a1 1 0 11-2 0v-4H5a1 1 0 110-2h4V5a1 1 0 011-1z"/>
+              </svg>
+            </button>
+          </div>
         </div>
         <ul id="profile-list" class="profile-list"></ul>
         <div class="sidebar-footer">
@@ -104,6 +164,18 @@
                     <path d="M11.5 2.5a1.414 1.414 0 0 1 2 2L5 13H3v-2L11.5 2.5z" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
                 </button>
+                <div class="profile-folder-badge-wrap">
+                  <button id="btn-profile-folder-select" class="profile-folder-btn has-tooltip" data-tooltip="Assign or change folder" aria-label="Assign Folder" type="button">
+                    <svg class="folder-badge-svg" viewBox="0 0 16 16" fill="currentColor" width="12" height="12">
+                      <path d="M.5 3l.04.87a1.99 1.99 0 0 0-.342 1.311l.637 7A2 2 0 0 0 2.826 14H13.17a2 2 0 0 0 1.991-1.819l.637-7A2 2 0 0 0 13.81 3H9.828a2 2 0 0 1-1.414-.586l-.828-.828A2 2 0 0 0 6.172 1H2.5a2 2 0 0 0-2 2zm1 0a1 1 0 0 1 1-1h3.672a1 1 0 0 1 .707.293l.828.828A3 3 0 0 0 9.828 4h3.982a1 1 0 0 1 .99 1.09l-.637 7a1 1 0 0 1-.996.91H2.826a1 1 0 0 1-.996-.91l-.637-7A1 1 0 0 1 1.5 3z"/>
+                    </svg>
+                    <span id="profile-folder-badge-text">No Folder</span>
+                    <svg class="folder-badge-arrow-svg" viewBox="0 0 16 16" fill="currentColor" width="8" height="8">
+                      <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
+                    </svg>
+                  </button>
+                  <div id="profile-folder-dropdown" class="profile-folder-dropdown hidden"></div>
+                </div>
               </div>
               <div class="toggle-wrap">
                 <button
@@ -170,6 +242,16 @@
                   </svg>
                   <span>Variables</span>
                   <span id="profile-vars-count" class="vars-count-badge">0</span>
+                </button>
+                <button id="btn-profile-cookie-vault" class="profile-vars-toggle-btn has-tooltip" data-tooltip="Manage domain session cookies (Cookie Vault)" aria-label="Cookie Vault">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" width="12" height="12">
+                    <circle cx="8" cy="8" r="6"/>
+                    <circle cx="6" cy="6.5" r="0.8" fill="currentColor"/>
+                    <circle cx="10" cy="6.5" r="0.8" fill="currentColor"/>
+                    <circle cx="8" cy="10" r="0.8" fill="currentColor"/>
+                  </svg>
+                  <span>Cookie Vault</span>
+                  <span id="profile-cookies-count" class="vars-count-badge">0</span>
                 </button>
                 <button id="btn-delete-profile" class="danger-btn small">Delete Profile</button>
               </div>
@@ -299,7 +381,7 @@
       </main>
     </div>
 
-    <!-- Share & Import Stateless URL Modal -->
+    <!-- Share Stateless URL Modal -->
     <div id="share-modal" class="modal-backdrop hidden">
       <div class="modal-card">
         <div class="modal-header">
@@ -313,6 +395,110 @@
             <button id="modal-action-btn" class="modal-btn primary">Copy Link</button>
           </div>
           <p id="modal-subtext" class="modal-subtext">Zero cloud storage. The entire profile is encoded directly in the URL hash for 100% private sharing.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Universal Import Hub Modal (cURL, Postman, ModHeader, Share Code, JSON) -->
+    <div id="import-hub-modal" class="modal-backdrop hidden">
+      <div class="modal-card import-modal-card">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <h3 class="modal-title">Universal Import Hub</h3>
+            <span class="import-badge">cURL • Postman • JSON</span>
+          </div>
+          <button id="btn-close-import-hub" class="modal-close-btn" title="Close">&times;</button>
+        </div>
+        <div class="import-modal-body">
+          <!-- Import Tabs -->
+          <div class="import-tabs">
+            <button id="tab-import-text" class="import-tab-btn active" data-tab="text" type="button">
+              <svg viewBox="0 0 16 16" fill="currentColor" width="13" height="13"><path d="M2 3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3zm2 2v2h8V5H4zm0 4v2h5V9H4z"/></svg>
+              cURL / URL / Code
+            </button>
+            <button id="tab-import-file" class="import-tab-btn" data-tab="file" type="button">
+              <svg viewBox="0 0 16 16" fill="currentColor" width="13" height="13"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg>
+              Upload File (JSON)
+            </button>
+          </div>
+
+          <!-- Tab Content: Text / cURL / Code / Raw JSON -->
+          <div id="import-content-text" class="import-tab-content active">
+            <p class="modal-desc">Paste a <strong>cURL command</strong>, <strong>API URL</strong>, <strong>Postman JSON</strong>, or <strong>HeaderCraft Share Code</strong>:</p>
+            <div class="import-textarea-wrap">
+              <textarea id="import-hub-textarea" class="import-textarea mono" spellcheck="false" placeholder='Paste curl command, URL, or JSON here...&#10;e.g. curl -H "Authorization: Bearer my_token" https://api.example.com/v1/users?debug=true'></textarea>
+              <div class="import-quick-actions">
+                <button id="btn-import-paste-sample" class="import-sample-btn" type="button">Paste Sample cURL</button>
+                <button id="btn-import-clear-text" class="import-sample-btn" type="button">Clear</button>
+              </div>
+            </div>
+
+            <!-- Live Detection Preview Box -->
+            <div id="import-preview-box" class="import-preview-box hidden">
+              <div class="import-preview-header">
+                <span id="import-detected-type" class="import-detected-pill">Detected: cURL Command</span>
+                <span id="import-preview-summary" class="import-preview-summary">0 Headers</span>
+              </div>
+              <div id="import-preview-details" class="import-preview-details mono"></div>
+            </div>
+
+            <div class="modal-footer import-footer">
+              <button id="btn-import-hub-submit" class="modal-btn primary">Import as Profile</button>
+            </div>
+          </div>
+
+          <!-- Tab Content: File Upload -->
+          <div id="import-content-file" class="import-tab-content hidden">
+            <p class="modal-desc">Select or drop a collection, specification, or session file in any supported format:</p>
+            <div id="import-drop-zone" class="import-drop-zone">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="import-drop-icon">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="12" y1="18" x2="12" y2="12"/>
+                <line x1="9" y1="15" x2="12" y2="12"/>
+                <line x1="15" y1="15" x2="12" y2="12"/>
+              </svg>
+              <p class="import-drop-text">Drag &amp; drop file here, or <span class="import-browse-link">browse</span></p>
+              <p class="import-drop-sub">Postman, Insomnia, Bruno, OpenAPI, HAR, SoapUI, WSDL, ModHeader</p>
+              <input type="file" id="import-hub-file-input" accept=".json,.txt,.har,.bru,.xml,.wsdl,.yaml,.yml" style="display:none" />
+            </div>
+
+            <div class="import-formats-grid">
+              <div class="import-format-card" id="card-format-postman">
+                <span class="format-badge postman">Postman</span>
+                <span class="format-label">Collections &amp; Environments (v2.0 / v2.1)</span>
+              </div>
+              <div class="import-format-card" id="card-format-insomnia">
+                <span class="format-badge insomnia">Insomnia</span>
+                <span class="format-label">v4/v5 Exports &amp; Cookie Jars</span>
+              </div>
+              <div class="import-format-card" id="card-format-bruno">
+                <span class="format-badge bruno">Bruno</span>
+                <span class="format-label">Bruno Collections &amp; .bru files</span>
+              </div>
+              <div class="import-format-card" id="card-format-openapi">
+                <span class="format-badge openapi">OpenAPI</span>
+                <span class="format-label">OpenAPI 3.x &amp; Swagger 2.0 Specs</span>
+              </div>
+              <div class="import-format-card" id="card-format-har">
+                <span class="format-badge har">HAR Dump</span>
+                <span class="format-label">Browser DevTools Network Archives (.har)</span>
+              </div>
+              <div class="import-format-card" id="card-format-soapui">
+                <span class="format-badge soapui">SoapUI / WSDL</span>
+                <span class="format-label">SOAP XML projects &amp; WSDL definitions</span>
+              </div>
+              <div class="import-format-card" id="card-format-headercraft">
+                <span class="format-badge headercraft">HeaderCraft</span>
+                <span class="format-label">Native profile backup JSON</span>
+              </div>
+              <div class="import-format-card" id="card-format-modheader">
+                <span class="format-badge modheader">ModHeader</span>
+                <span class="format-label">ModHeader &amp; Requestly rule exports</span>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
@@ -414,8 +600,119 @@
             <code class="mono has-tooltip help-copy-code" data-tooltip="Click to copy {{$randomInt}}" data-copy="{{$randomInt}}">{{$randomInt}}</code>
           </div>
         </div>
-        <div class="modal-footer vars-modal-footer">
-          <button id="btn-vars-modal-done" class="modal-btn primary">Done</button>
+      </div>
+    </div>
+
+    <!-- Cookie Vault Modal (Per-Domain Persistent Cookie Store) -->
+    <div id="cookie-vault-modal" class="modal-backdrop hidden">
+      <div class="modal-card cookie-vault-modal-card">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <h3 class="modal-title">🍪 Cookie Vault</h3>
+            <span class="cookie-vault-badge">Session Store</span>
+          </div>
+          <button id="btn-close-cookie-vault" class="modal-close-btn" title="Close">&times;</button>
+        </div>
+        <div class="cookie-vault-modal-body">
+          <p class="cookie-vault-desc">
+            A per-domain cookie store that persists across requests, so authenticated session flows behave as they do in a browser.
+          </p>
+
+          <!-- Domain Switcher & Toolbar -->
+          <div class="cookie-domain-bar">
+            <div class="cookie-domain-select-wrap">
+              <div class="cookie-domain-header-row">
+                <label class="field-label" for="cookie-domain-select">Domain Store</label>
+                <label class="domain-enabled-toggle has-tooltip" data-tooltip="Toggle auto-injection of cookies for this domain">
+                  <input id="cookie-domain-enabled" type="checkbox" checked />
+                  <span class="domain-toggle-label">Active</span>
+                </label>
+              </div>
+              <div class="cookie-domain-input-group">
+                <select id="cookie-domain-select" class="cookie-domain-select"></select>
+                <button id="btn-add-cookie-domain" class="drawer-add-btn" title="Add new domain store">+ Domain</button>
+                <button id="btn-del-cookie-domain" class="cookie-btn-icon danger has-tooltip" data-tooltip="Delete domain store" aria-label="Delete domain">
+                  <svg viewBox="0 0 16 16" width="11" height="11" fill="currentColor">
+                    <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                    <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="cookie-domain-actions">
+              <button id="btn-fetch-tab-cookies" class="cookie-action-btn has-tooltip" data-tooltip="Import live cookies from current tab">
+                <svg viewBox="0 0 16 16" width="11" height="11" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
+                <span>Fetch Tab</span>
+              </button>
+              <button id="btn-sync-browser-cookies" class="cookie-action-btn has-tooltip" data-tooltip="Set these cookies into Chrome browser storage">
+                <svg viewBox="0 0 16 16" width="11" height="11" fill="currentColor"><path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zm3.5 7.5a.5.5 0 0 1 0 1H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5H11.5z"/></svg>
+                <span>Sync Browser</span>
+              </button>
+              <button id="btn-copy-cookie-header" class="cookie-action-btn has-tooltip" data-tooltip="Copy as 'Cookie: ...' HTTP header">
+                <svg viewBox="0 0 16 16" width="11" height="11" fill="currentColor"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/></svg>
+                <span>Copy Header</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Cookie Quick String Importer (Collapsible) -->
+          <div id="cookie-string-importer" class="cookie-string-importer hidden">
+            <input id="cookie-string-input" class="cookie-string-input mono" type="text" placeholder="Paste: key1=val1; key2=val2 or curl --cookie string" />
+            <button id="btn-submit-cookie-string" class="modal-btn primary small">Parse &amp; Add</button>
+            <button id="btn-cancel-cookie-string" class="modal-btn ghost small">Cancel</button>
+          </div>
+
+          <!-- Cookies Table Toolbar -->
+          <div class="cookie-table-toolbar">
+            <div class="cookie-table-info">
+              <span id="cookie-count-label">0 cookies stored for this domain</span>
+            </div>
+            <div class="cookie-table-actions">
+              <button id="btn-toggle-cookie-string-box" class="cookie-tool-btn">Paste String</button>
+              <button id="btn-add-cookie-row" class="drawer-add-btn">+ Add Cookie</button>
+            </div>
+          </div>
+
+          <!-- Cookies Table Header -->
+          <div class="cookie-table-header">
+            <span class="cookie-th th-check" title="Active">
+              <svg viewBox="0 0 16 16" width="10" height="10" fill="currentColor">
+                <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
+              </svg>
+            </span>
+            <span class="cookie-th th-name">Name</span>
+            <span class="cookie-th th-val">Value</span>
+            <span class="cookie-th th-path">Path</span>
+            <span class="cookie-th th-actions">Actions</span>
+          </div>
+
+          <!-- Cookies List Container -->
+          <div id="cookie-rows-container" class="cookie-rows-container">
+            <!-- Dynamic cookie item rows -->
+          </div>
+          <p id="cookie-empty-hint" class="help-section-desc help-muted hidden">No cookies stored for this domain. Click "+ Add Cookie", "Paste String", or "Fetch Tab".</p>
+
+        </div>
+        <div class="modal-footer">
+          <button id="btn-cookie-vault-done" class="modal-btn primary">Done</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Prompt / Input Dialog Modal -->
+    <div id="prompt-dialog-modal" class="modal-backdrop hidden">
+      <div class="modal-card prompt-modal-card">
+        <div class="modal-header">
+          <h3 id="prompt-modal-title" class="modal-title">Create Workspace</h3>
+          <button id="btn-close-prompt" class="modal-close-btn" title="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p id="prompt-modal-desc" class="modal-desc">Enter name:</p>
+          <div class="modal-input-group">
+            <input id="prompt-modal-input" class="modal-input" type="text" maxlength="40" spellcheck="false" />
+            <button id="btn-prompt-modal-submit" class="modal-btn primary">Save</button>
+          </div>
         </div>
       </div>
     </div>

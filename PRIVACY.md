@@ -34,7 +34,9 @@ This information is necessary for the extension to function. It is:
 ## Permissions Used
 
 - **`declarativeNetRequest`**: Allows Chrome to apply your header rules at the browser level. Your actual network traffic is never exposed to the extension's code.
-- **`storage`**: Allows saving your profiles to `chrome.storage.local` on your device.
+- **`storage`**: Allows saving your profiles, workspaces, and Cookie Vault stores to `chrome.storage.local` on your device.
+- **`cookies`**: Required strictly for the Cookie Vault feature to view, save, and sync local session testing cookies across user-specified domains during API and frontend testing. All cookies remain strictly on your local machine and are never transmitted externally.
+- **`alarms`**: Used to schedule auto-disable profile timers and refresh dynamic variables.
 - **`<all_urls>`** (host permission): Required because users configure rules for arbitrary domains. Chrome applies rules internally; extension code never reads request data.
 
 ## Data Deletion

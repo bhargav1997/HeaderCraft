@@ -203,8 +203,8 @@ function buildQueryParamRules(profile, idBase) {
 
 async function rebuildRules() {
   try {
-    const { profiles = [], activeProfileId = null } = await chrome.storage.local.get([
-      'profiles', 'activeProfileId',
+    const { profiles = [], activeProfileId = null, cookieVault = [] } = await chrome.storage.local.get([
+      'profiles', 'activeProfileId', 'cookieVault',
     ]);
 
     // Query both dynamic rules and session rules
@@ -234,6 +234,38 @@ async function rebuildRules() {
         addSessionRules.push(...rules);
       } else {
         addDynamicRules.push(...rules);
+      }
+    }
+
+    // ── Build Cookie Vault Rules (Allocated in range 90000+) ──
+    if (Array.isArray(cookieVault)) {
+      let cIdx = 0;
+      for (const store of cookieVault) {
+        if (!store || store.enabled === false || !store.domain) continue;
+        const validCookies = (store.cookies || []).filter(c => c && c.enabled !== false && c.name && c.name.trim());
+        if (!validCookies.length) continue;
+
+        const cookieValue = validCookies.map(c => `${c.name.trim()}=${c.value ?? ''}`).join('; ');
+        const domainClean = store.domain.trim().replace(/^https?:\/\//i, '').replace(/\/.*$/, '').replace(/^\*?\./, '');
+        if (!domainClean) continue;
+
+        addDynamicRules.push({
+          id: 90000 + (cIdx++),
+          priority: 3,
+          action: {
+            type: 'modifyHeaders',
+            requestHeaders: [{
+              header: 'Cookie',
+              operation: 'set',
+              value: cookieValue,
+            }],
+          },
+          condition: {
+            urlFilter: `||${domainClean}/`,
+            resourceTypes: ALL_RESOURCE_TYPES,
+          },
+        });
+        if (cIdx >= 500) break;
       }
     }
 
@@ -307,7 +339,7 @@ function syncAutoDisableAlarms(profiles) {
 
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local') return;
-  if ('profiles' in changes || 'activeProfileId' in changes) {
+  if ('profiles' in changes || 'activeProfileId' in changes || 'cookieVault' in changes) {
     if ('profiles' in changes) {
       syncAutoDisableAlarms(changes.profiles.newValue);
     }

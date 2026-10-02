@@ -190,32 +190,33 @@
 
 ---
 
-### Test Case 12: Profile Export & Import (JSON & ModHeader/Requestly)
-**Goal:** Verify exporting your configuration and restoring it from a file.
+### Test Case 12: Universal Import Hub (cURL Commands, URLs & Share Codes)
+**Goal:** Verify pasting cURL commands, API URLs, Postman JSON, or HeaderCraft share codes with real-time detection preview and 1-click import.
 
-- **Step 1:** Click the **Export** icon (⬇️ arrow pointing down to container) in top header bar.
-  - **Result:** A file named `headercraft-profile-default-profile.json` downloads to your computer.
-- **Step 2:** Delete a rule from HeaderCraft.
-- **Step 3:** Click the **Import JSON** icon (⬆️ arrow pointing up) in top header bar.
-- **Step 4:** Select the downloaded JSON file.
-  - **Result:** Toast notice "Profile imported successfully" appears, and your deleted rule is fully restored!
-- **Step 5:** Click the **Import ModHeader / Requestly** icon (plus icon inside circle). Select any ModHeader or Requestly export file.
-  - **Result:** Rules are automatically converted and imported into HeaderCraft.
-- **Expected Result:** Exporting and importing works flawlessly without losing settings.
+- **Step 1:** Click the **Import Hub** icon (box with arrow and badge) in the top header bar.
+  - **Result:** The **Universal Import Hub** modal opens with tabs `cURL / URL / Code` and `Upload File (JSON)`.
+- **Step 2:** Click **Paste Sample cURL** (or paste any cURL command from terminal / DevTools).
+  - **Result:** Live preview instantly detects `cURL Command` and highlights the parsed headers (`Authorization`, `X-Client-Version`, `Accept`) and query parameters (`role=admin`, `debug=true`)!
+- **Step 3:** Click **Import as Profile**.
+  - **Result:** A new profile is created with all headers, URL filter, and query parameters pre-configured!
+- **Step 4:** In the Import Hub, paste a raw API URL (e.g. `https://httpbin.org/get?user=qa_test&token=secret123`) and click Import.
+  - **Result:** Extracts domain `httpbin.org` as URL filter and creates a Query Parameter rule for `user` and `token`.
+- **Expected Result:** Any cURL command or URL parses into a ready-to-use profile in seconds.
 
 ---
 
-### Test Case 13: Share Link & URL Import Modal
-**Goal:** Verify sharing a profile via a lightweight URL or code link.
+### Test Case 13: Postman Collection & Environment JSON File Import
+**Goal:** Verify importing Postman Collections (v2.0/v2.1) and Environment JSON files.
 
-- **Step 1:** Click the **Share profile** link icon (🔗 link icon) in top header bar.
-  - **Result:** A modal popup opens showing a share link (e.g. `https://headercraft.dev/import#...`) and a short import code.
-- **Step 2:** Click **Copy Link**.
-  - **Result:** Toast notice "Copied link to clipboard" appears.
-- **Step 3:** Click the **Import from Link** icon (link with plus) in header bar.
-- **Step 4:** Paste the link into the box and click **Import Profile**.
-  - **Result:** Profile is created and populated with all shared rules!
-- **Expected Result:** Sharing and receiving profiles via stateless URLs works without any external server required.
+- **Step 1:** Click the **Import Hub** icon, then switch to the **Upload File (JSON)** tab (or click the **Import JSON** icon directly).
+- **Step 2:** Drag-and-drop or select any Postman Collection JSON file (`collection.json`) or Postman Environment JSON (`environment.json`).
+- **Step 3:** Observe the imported profile:
+  - Collection name becomes the Profile Name (e.g., `Postman: E-Commerce API`).
+  - Auth tokens (Bearer, Basic, APIKey) are converted to `Authorization` headers.
+  - Request headers (`Accept`, `Content-Type`, custom headers) are imported.
+  - Query parameters and Collection variables (`{{baseUrl}}`, `{{apiKey}}`) are converted into Custom Variables and Query Param rules!
+  - Saved mock responses in Postman are converted to Mock rules.
+- **Expected Result:** Seamless 1-click migration from Postman collections and environments into HeaderCraft.
 
 ---
 
@@ -249,8 +250,6 @@
   - **Result:** Saves immediately and persists when reopening the regular popup.
 - **Expected Result:** Full Tab mode works seamlessly with responsive typography and full control.
 
----
-
 ### Test Case 16: In-App Help & Syntax Reference Modal
 **Goal:** Verify the in-app help modal provides dynamic variables reference and regex syntax.
 
@@ -265,10 +264,98 @@
 
 ---
 
+### Test Case 17: Multi-Workspace Isolation (Postman / Requestly Style)
+**Goal:** Verify creating separate workspaces to isolate projects and environments.
+
+- **Step 1:** In the left sidebar header, click the **Workspace Switcher** (showing `Personal ▾`).
+  - **Result:** Dropdown opens showing current workspace with a checkmark `✓` and actions: `+ New Workspace`, `✏️ Rename`, `🗑️ Delete`.
+- **Step 2:** Click **+ New Workspace**.
+  - **Result:** An in-app prompt modal opens asking for workspace name.
+- **Step 3:** Enter `Staging QA` and click **Create Workspace**.
+  - **Result:** Workspace switches to `Staging QA`. The profile list updates to show an empty state for this new isolated workspace.
+- **Step 4:** Click **+** to add a new profile named `Staging Headers`.
+- **Step 5:** Switch back to `Personal` using the switcher.
+  - **Result:** You see all your original profiles from the `Personal` workspace.
+- **Step 6:** Rename `Staging QA` to `Staging Environment` using the `✏️ Rename` option.
+  - **Result:** Workspace name updates immediately in the UI.
+- **Expected Result:** Workspaces provide full isolation of testing profiles and folders.
+
+---
+
+### Test Case 18: Collapsible Folders, Drag & Drop & Direct Profile Creation
+**Goal:** Verify organizing profiles inside custom collapsible folders, drag-and-drop movements, and 1-click profile creation within folders.
+
+- **Step 1:** In the sidebar header under PROFILES, hover over the **New Folder** icon button.
+  - **Result:** The tooltip "Create new folder" appears completely visible without clipping.
+- **Step 2:** Click the button, enter `Auth Services`, and click **Create Folder**.
+  - **Result:** A folder named `Auth Services` appears with crisp SVG folder & chevron icons, folder count `(0)`, and a quick `+` button.
+- **Step 3 (Direct Profile Creation in Folder):** Hover over the `Auth Services` folder and click the quick `+` (Add profile) button.
+  - **Result:** A new profile `Auth Services Profile` is immediately created inside `Auth Services`, folder auto-expands, and profile is selected for editing.
+- **Step 4 (Drag & Drop into Folder):** Click and drag an existing unassigned profile from the sidebar and drop it onto `Auth Services`.
+  - **Result:** The folder glows with an indigo drag-hover indicator, and upon drop, the profile moves into the folder with an instant confirmation toast.
+- **Step 5 (Drag out to Root):** Drag the profile out of the folder and drop it onto the **"Drop here for Root (No Folder)"** zone.
+  - **Result:** The profile moves back to the root level.
+- **Step 6 (Full-Tab Expansion):** Click the **⛶ (Full Tab)** button in the header.
+  - **Result:** Folder headers, SVG icons, text, and quick action buttons scale up proportionally and render sharply.
+- **Expected Result:** Folders allow developers to structure complex test suites with native drag-and-drop and instant 1-click profile creation.
+
+---
+
+### Test Case 19: Cookie Vault (Per-Domain Session Cookie Store)
+**Goal:** Verify storing, managing, and injecting persistent session cookies per domain.
+
+- **Step 1:** In the top header bar, click the **🍪 Cookie Vault** button (or click **Cookie Vault** in the profile toolbar).
+  - **Result:** The Cookie Vault modal opens with a dark modern UI, displaying the domain selector, active toggle, and cookie table.
+- **Step 2:** Click **+ Add Domain**, enter `httpbin.org`, and click Add Domain.
+  - **Result:** `httpbin.org` is created as an active domain store.
+- **Step 3:** Click **+ Add Cookie**.
+  - **Result:** A new cookie row appears. Enter Name: `hc_session_id`, Value: `auth_sec_999`, Path: `/`.
+- **Step 4:** Click the 👁️ eye toggle icon next to the value.
+  - **Result:** The value masks/unmasks between password dots and plain text.
+- **Step 5:** Click **Paste Cookie String**. Paste `cf_token=abc12345; user_role=admin` and click **Parse & Add**.
+  - **Result:** Both cookies are parsed into individual rows and the count updates to 3 cookies!
+- **Step 6:** Click **📋 Copy Header**.
+  - **Result:** Toast shows "Copied 'Cookie: ...' header to clipboard".
+- **Step 7:** With `httpbin.org` active in Cookie Vault, visit `https://httpbin.org/cookies` in your browser.
+  - **Result:** The page returns `"cookies": { "hc_session_id": "auth_sec_999", "cf_token": "abc12345", "user_role": "admin" }`!
+- **Step 8:** Click **📥 Fetch from Tab** while on a logged-in site.
+  - **Result:** Live browser cookies for that tab are automatically cloned into the Cookie Vault!
+- **Expected Result:** Session cookies persist and auto-inject into matching domain requests without manual header crafting.
+
+---
+
+### Test Case 20: Expanded Universal Migration Hub (Insomnia, Bruno, OpenAPI, HAR, SoapUI)
+**Goal:** Verify 1-click import of Insomnia, Bruno, OpenAPI, HAR, and SoapUI files into HeaderCraft.
+
+- **Step 1:** In the top header bar, click the **Import Hub** icon.
+- **Step 2:** In the Text tab, paste a Bruno `.bru` snippet:
+  ```
+  meta {
+    name: Get Customer Orders
+    type: http
+  }
+  get {
+    url: https://api.store.com/v1/orders
+  }
+  headers {
+    Authorization: Bearer test_token_xyz
+    X-Client-Id: client_456
+  }
+  ```
+  - **Result:** Live preview detects: `Detected: Bruno (.bru) File`! Click **Import as Profile**. Profile imports with URL filter `api.store.com` and both headers.
+- **Step 3:** Switch to the **Upload File** tab. Confirm format cards for: **Postman**, **Insomnia**, **Bruno**, **OpenAPI**, **HAR Dump**, **SoapUI / WSDL**, and **HeaderCraft**.
+- **Step 4:** Drag-and-drop or select an OpenAPI/Swagger JSON or YAML spec.
+  - **Result:** Endpoints, headers, query parameters, and mock responses are extracted into an active testing profile!
+- **Step 5:** Select a Chrome DevTools Network `.har` file.
+  - **Result:** Reconstructs requests, headers, and extracts response payloads into Mock rules and request cookies into Cookie Vault!
+- **Expected Result:** Seamless migration from all major developer API tools without rewriting tests.
+
+---
+
 ## ✅ QA Sign-Off Criteria
 
 Before approving for Chrome Web Store release, confirm:
-1. All 16 test cases pass with expected results.
+1. All 20 test cases pass with expected results.
 2. No errors or red warning messages appear in Chrome Developer Tools (`F12` console).
 3. The popup opens in under 100 milliseconds.
 4. Memory usage remains low and stable.

@@ -84,23 +84,50 @@ function makeEnabledDot(checked, onChange) {
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
-let profiles        = [];
-let activeProfileId = null;
+let workspaces        = [{ id: 'default', name: 'Personal', isDefault: true }];
+let activeWorkspaceId = 'default';
+let folders           = []; // [{ id: string, name: string, workspaceId: string, collapsed: boolean }]
+let profiles          = [];
+let activeProfileId   = null;
 let selectedProfileId = null;
-let activeTab       = 'headers'; // 'headers' | 'redirects' | 'queryparams' | 'mocks'
+let activeTab         = 'headers'; // 'headers' | 'redirects' | 'queryparams' | 'mocks'
+let cookieVault       = []; // [{ id, domain, enabled, cookies: [{ id, name, value, path, enabled, secure, httpOnly }] }]
+let selectedCookieDomainId = null;
 
 // ── DOM refs ─────────────────────────────────────────────────────────────────
+
+const btnWorkspaceSwitcher  = document.getElementById('btn-workspace-switcher');
+const currentWorkspaceName  = document.getElementById('current-workspace-name');
+const workspaceDropdown     = document.getElementById('workspace-dropdown');
+const workspaceList         = document.getElementById('workspace-list');
+const btnCreateWorkspace    = document.getElementById('btn-create-workspace');
+const btnRenameWorkspace    = document.getElementById('btn-rename-workspace');
+const btnDeleteWorkspace    = document.getElementById('btn-delete-workspace');
+
+const btnAddFolder          = document.getElementById('btn-add-folder');
+const btnProfileFolderSelect= document.getElementById('btn-profile-folder-select');
+const profileFolderBadgeText= document.getElementById('profile-folder-badge-text');
+const profileFolderDropdown = document.getElementById('profile-folder-dropdown');
 
 const profileList           = document.getElementById('profile-list');
 const btnAddProfile         = document.getElementById('btn-add-profile');
 const btnSeedExample         = document.getElementById('btn-seed-example');
 const btnShareProfile       = document.getElementById('btn-share-profile');
-const btnImportUrl          = document.getElementById('btn-import-url');
+const btnImportHub          = document.getElementById('btn-import-hub') || document.getElementById('btn-import-url');
+const btnImportUrl          = btnImportHub;
 const btnExport             = document.getElementById('btn-export');
 const btnImport             = document.getElementById('btn-import');
 const btnImportModHeader    = document.getElementById('btn-import-modheader');
 const fileImportInput       = document.getElementById('file-import-input');
 const fileImportModHeader   = document.getElementById('file-import-modheader');
+
+// Prompt Modal DOM refs
+const promptDialogModal     = document.getElementById('prompt-dialog-modal');
+const promptModalTitle      = document.getElementById('prompt-modal-title');
+const promptModalDesc       = document.getElementById('prompt-modal-desc');
+const promptModalInput      = document.getElementById('prompt-modal-input');
+const btnPromptModalSubmit  = document.getElementById('btn-prompt-modal-submit');
+const btnClosePrompt        = document.getElementById('btn-close-prompt');
 
 const profileConfig         = document.getElementById('profile-config');
 const noProfileState        = document.getElementById('no-profile-state');
@@ -122,6 +149,56 @@ const modalInput            = document.getElementById('modal-input');
 const modalActionBtn        = document.getElementById('modal-action-btn');
 const modalSubtext          = document.getElementById('modal-subtext');
 const btnCloseModal         = document.getElementById('btn-close-modal');
+
+// Import Hub Modal DOM refs
+const importHubModal        = document.getElementById('import-hub-modal');
+const btnCloseImportHub     = document.getElementById('btn-close-import-hub');
+const tabImportText         = document.getElementById('tab-import-text');
+const tabImportFile         = document.getElementById('tab-import-file');
+const importContentText     = document.getElementById('import-content-text');
+const importContentFile     = document.getElementById('import-content-file');
+const importHubTextarea     = document.getElementById('import-hub-textarea');
+const btnImportPasteSample  = document.getElementById('btn-import-paste-sample');
+const btnImportClearText    = document.getElementById('btn-import-clear-text');
+const importPreviewBox      = document.getElementById('import-preview-box');
+const importDetectedPill    = document.getElementById('import-detected-pill');
+const importPreviewSummary  = document.getElementById('import-preview-summary');
+const importPreviewDetails  = document.getElementById('import-preview-details');
+const btnImportHubSubmit    = document.getElementById('btn-import-hub-submit');
+const importDropZone        = document.getElementById('import-drop-zone');
+const importHubFileInput    = document.getElementById('import-hub-file-input');
+const cardFormatPostman     = document.getElementById('card-format-postman');
+const cardFormatInsomnia    = document.getElementById('card-format-insomnia');
+const cardFormatBruno       = document.getElementById('card-format-bruno');
+const cardFormatOpenapi     = document.getElementById('card-format-openapi');
+const cardFormatHar         = document.getElementById('card-format-har');
+const cardFormatSoapui      = document.getElementById('card-format-soapui');
+const cardFormatHeadercraft = document.getElementById('card-format-headercraft');
+const cardFormatModheader   = document.getElementById('card-format-modheader');
+
+// Cookie Vault DOM refs
+const btnCookieVault            = document.getElementById('btn-cookie-vault');
+const btnProfileCookieVault     = document.getElementById('btn-profile-cookie-vault');
+const profileCookiesCount       = document.getElementById('profile-cookies-count');
+const cookieVaultModal          = document.getElementById('cookie-vault-modal');
+const btnCloseCookieVault       = document.getElementById('btn-close-cookie-vault');
+const btnCookieVaultDone        = document.getElementById('btn-cookie-vault-done');
+const cookieDomainSelect        = document.getElementById('cookie-domain-select');
+const btnAddCookieDomain        = document.getElementById('btn-add-cookie-domain');
+const btnDelCookieDomain        = document.getElementById('btn-del-cookie-domain');
+const cookieDomainEnabled       = document.getElementById('cookie-domain-enabled');
+const btnFetchTabCookies        = document.getElementById('btn-fetch-tab-cookies');
+const btnSyncBrowserCookies     = document.getElementById('btn-sync-browser-cookies');
+const btnCopyCookieHeader       = document.getElementById('btn-copy-cookie-header');
+const cookieStringImporter      = document.getElementById('cookie-string-importer');
+const cookieStringInput         = document.getElementById('cookie-string-input');
+const btnToggleCookieStringBox  = document.getElementById('btn-toggle-cookie-string-box');
+const btnSubmitCookieString     = document.getElementById('btn-submit-cookie-string');
+const btnCancelCookieString     = document.getElementById('btn-cancel-cookie-string');
+const cookieCountLabel          = document.getElementById('cookie-count-label');
+const btnAddCookieRow           = document.getElementById('btn-add-cookie-row');
+const cookieRowsContainer       = document.getElementById('cookie-rows-container');
+const cookieEmptyHint           = document.getElementById('cookie-empty-hint');
 
 // Expand-to-Tab & Help DOM refs
 const btnExpandTab          = document.getElementById('btn-expand-tab');
@@ -697,20 +774,26 @@ function renderEmptyPresets() {
 
 // ── Storage ───────────────────────────────────────────────────────────────────
 
-function migrateProfile(p) {
+// ── Storage ───────────────────────────────────────────────────────────────────
+
+function migrateProfile(p, currentWsId = 'default') {
   return {
     redirects: [], queryParams: [], mocks: [], customVars: [],
     scopedTabId: null, scopedTabTitle: null,
+    workspaceId: p.workspaceId || currentWsId || 'default',
+    folderId: p.folderId || null,
     ...p,
     headers: p.headers ?? [],
     customVars: p.customVars ?? [],
   };
 }
 
-function createUnifiedExampleProfile() {
+function createUnifiedExampleProfile(wsId = 'default') {
   const uid = () => crypto.randomUUID();
   return {
     id: uid(),
+    workspaceId: wsId,
+    folderId: null,
     name: 'Example – All Features',
     urlFilter: '',
     useRegex: false,
@@ -829,19 +912,37 @@ function createUnifiedExampleProfile() {
 }
 
 async function loadStorage() {
-  const data = await chrome.storage.local.get(['profiles', 'activeProfileId', 'exampleSeededV3']);
-  let loadedProfiles = (data.profiles ?? []).map(migrateProfile);
+  const data = await chrome.storage.local.get([
+    'workspaces', 'activeWorkspaceId', 'folders',
+    'profiles', 'activeProfileId', 'cookieVault', 'exampleSeededV3'
+  ]);
+
+  workspaces = Array.isArray(data.workspaces) && data.workspaces.length > 0
+    ? data.workspaces
+    : [{ id: 'default', name: 'Personal', isDefault: true, createdAt: Date.now() }];
+
+  activeWorkspaceId = data.activeWorkspaceId && workspaces.some(w => w.id === data.activeWorkspaceId)
+    ? data.activeWorkspaceId
+    : workspaces[0].id;
+
+  folders = Array.isArray(data.folders) ? data.folders : [];
+  cookieVault = Array.isArray(data.cookieVault) ? data.cookieVault : [];
+
+  let loadedProfiles = (data.profiles ?? []).map(p => migrateProfile(p, activeWorkspaceId));
 
   // If v3 unified example profile has not yet been seeded, or if storage has no profiles at all:
   if (!data.exampleSeededV3 || loadedProfiles.length === 0) {
-    // Strip out any obsolete split example profiles
     loadedProfiles = loadedProfiles.filter(p => !p.name?.startsWith('📖 Example') && !p.name?.startsWith('Example – All Features'));
-    const example = createUnifiedExampleProfile();
+    const example = createUnifiedExampleProfile(activeWorkspaceId);
     loadedProfiles.unshift(example);
     activeProfileId = data.activeProfileId ?? example.id;
     await chrome.storage.local.set({
+      workspaces,
+      activeWorkspaceId,
+      folders,
       profiles: loadedProfiles,
       activeProfileId,
+      cookieVault,
       exampleSeededV3: true,
     });
   } else {
@@ -849,10 +950,26 @@ async function loadStorage() {
   }
 
   profiles = loadedProfiles;
+  const currentWsProfiles = profiles.filter(p => (p.workspaceId || 'default') === activeWorkspaceId);
+  selectedProfileId = currentWsProfiles.find(p => p.id === activeProfileId)?.id || currentWsProfiles[0]?.id || profiles[0]?.id || null;
 }
 
 async function saveStorage() {
-  await chrome.storage.local.set({ profiles, activeProfileId });
+  await chrome.storage.local.set({
+    workspaces,
+    activeWorkspaceId,
+    folders,
+    profiles,
+    activeProfileId,
+    cookieVault,
+  });
+}
+
+// ── HTML Escape Helper ────────────────────────────────────────────────────────
+
+function escapeHtml(str) {
+  if (typeof str !== 'string') return '';
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
@@ -865,6 +982,319 @@ function showToast(msg, type = '') {
   toastTimer = setTimeout(() => { toast.className = 'toast'; }, 2500);
 }
 
+// ── Prompt Modal Dialog Controller ───────────────────────────────────────────
+
+let promptResolve = null;
+
+function openPromptDialog({ title = 'Enter Name', desc = 'Enter name:', defaultValue = '', placeholder = '', confirmText = 'Save' }) {
+  return new Promise((resolve) => {
+    promptResolve = resolve;
+    if (promptModalTitle) promptModalTitle.textContent = title;
+    if (promptModalDesc) promptModalDesc.textContent = desc;
+    if (promptModalInput) {
+      promptModalInput.value = defaultValue;
+      promptModalInput.placeholder = placeholder;
+    }
+    if (btnPromptModalSubmit) btnPromptModalSubmit.textContent = confirmText;
+    if (promptDialogModal) {
+      promptDialogModal.classList.remove('hidden');
+      setTimeout(() => {
+        promptModalInput?.focus();
+        promptModalInput?.select();
+      }, 50);
+    }
+  });
+}
+
+function closePromptDialog(result = null) {
+  if (promptDialogModal) promptDialogModal.classList.add('hidden');
+  if (promptResolve) {
+    promptResolve(result);
+    promptResolve = null;
+  }
+}
+
+if (btnPromptModalSubmit && promptModalInput) {
+  btnPromptModalSubmit.addEventListener('click', () => {
+    const val = promptModalInput.value.trim();
+    closePromptDialog(val || null);
+  });
+  promptModalInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const val = promptModalInput.value.trim();
+      closePromptDialog(val || null);
+    } else if (e.key === 'Escape') {
+      closePromptDialog(null);
+    }
+  });
+}
+
+if (btnClosePrompt) btnClosePrompt.addEventListener('click', () => closePromptDialog(null));
+if (promptDialogModal) {
+  promptDialogModal.addEventListener('click', (e) => {
+    if (e.target === promptDialogModal) closePromptDialog(null);
+  });
+}
+
+// ── Workspace Controller ──────────────────────────────────────────────────────
+
+function getActiveWorkspace() {
+  return workspaces.find(w => w.id === activeWorkspaceId) || workspaces[0];
+}
+
+async function switchWorkspace(wsId) {
+  if (!workspaces.some(w => w.id === wsId)) return;
+  activeWorkspaceId = wsId;
+  closeWorkspaceDropdown();
+
+  const wsProfiles = profiles.filter(p => (p.workspaceId || 'default') === activeWorkspaceId);
+  selectedProfileId = wsProfiles[0]?.id || null;
+
+  await saveStorage();
+  render();
+  const ws = getActiveWorkspace();
+  showToast(`Workspace: "${ws.name}"`, 'info');
+}
+
+async function handleCreateWorkspace() {
+  closeWorkspaceDropdown();
+  const name = await openPromptDialog({
+    title: 'New Workspace',
+    desc: 'Enter a name for the new workspace (e.g. Staging QA, Billing API):',
+    placeholder: 'Workspace name...',
+    confirmText: 'Create Workspace',
+  });
+  if (!name) return;
+
+  const newWs = {
+    id: crypto.randomUUID(),
+    name,
+    isDefault: false,
+    createdAt: Date.now(),
+  };
+
+  workspaces.push(newWs);
+  activeWorkspaceId = newWs.id;
+  selectedProfileId = null;
+
+  await saveStorage();
+  render();
+  showToast(`Created workspace: "${name}"`, 'success');
+}
+
+async function handleRenameWorkspace() {
+  closeWorkspaceDropdown();
+  const currentWs = getActiveWorkspace();
+  const newName = await openPromptDialog({
+    title: 'Rename Workspace',
+    desc: `Enter a new name for "${currentWs.name}":`,
+    defaultValue: currentWs.name,
+    confirmText: 'Rename',
+  });
+  if (!newName || newName === currentWs.name) return;
+
+  currentWs.name = newName;
+  await saveStorage();
+  render();
+  showToast(`Renamed workspace to "${newName}"`, 'success');
+}
+
+async function handleDeleteWorkspace() {
+  closeWorkspaceDropdown();
+  const currentWs = getActiveWorkspace();
+  if (workspaces.length <= 1 || currentWs.isDefault) {
+    showToast('Cannot delete the default workspace', 'error');
+    return;
+  }
+
+  const defaultWs = workspaces.find(w => w.isDefault) || workspaces[0];
+  profiles.forEach(p => {
+    if (p.workspaceId === currentWs.id) p.workspaceId = defaultWs.id;
+  });
+  folders.forEach(f => {
+    if (f.workspaceId === currentWs.id) f.workspaceId = defaultWs.id;
+  });
+
+  workspaces = workspaces.filter(w => w.id !== currentWs.id);
+  activeWorkspaceId = defaultWs.id;
+  selectedProfileId = profiles.find(p => p.workspaceId === defaultWs.id)?.id || null;
+
+  await saveStorage();
+  render();
+  showToast(`Deleted workspace "${currentWs.name}"`, 'info');
+}
+
+function toggleWorkspaceDropdown() {
+  if (!workspaceDropdown) return;
+  const isHidden = workspaceDropdown.classList.contains('hidden');
+  if (isHidden) {
+    renderWorkspaceList();
+    workspaceDropdown.classList.remove('hidden');
+  } else {
+    workspaceDropdown.classList.add('hidden');
+  }
+}
+
+function closeWorkspaceDropdown() {
+  if (workspaceDropdown) workspaceDropdown.classList.add('hidden');
+}
+
+function renderWorkspaceList() {
+  if (!workspaceList) return;
+  workspaceList.innerHTML = '';
+  for (const ws of workspaces) {
+    const li = document.createElement('li');
+    li.className = 'workspace-item' + (ws.id === activeWorkspaceId ? ' active' : '');
+    
+    const leftSpan = document.createElement('span');
+    leftSpan.className = 'workspace-item-left';
+
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'workspace-item-icon';
+    iconSpan.innerHTML = '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5v-3zM9 2.5A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5v-3zM1 10.5A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5v-3zm8 0A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5v-3z"/></svg>';
+    leftSpan.appendChild(iconSpan);
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'workspace-item-name';
+    nameSpan.textContent = ws.name;
+    leftSpan.appendChild(nameSpan);
+
+    li.appendChild(leftSpan);
+
+    if (ws.id === activeWorkspaceId) {
+      const checkSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      checkSvg.setAttribute('viewBox', '0 0 16 16');
+      checkSvg.setAttribute('fill', 'currentColor');
+      checkSvg.setAttribute('class', 'workspace-check-svg');
+      checkSvg.innerHTML = '<path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>';
+      li.appendChild(checkSvg);
+    }
+    li.addEventListener('click', () => switchWorkspace(ws.id));
+    workspaceList.appendChild(li);
+  }
+}
+
+// ── Folder Management Controller ─────────────────────────────────────────────
+
+async function handleCreateFolder() {
+  const name = await openPromptDialog({
+    title: 'New Folder',
+    desc: 'Enter a folder name (e.g. Authentication, Staging APIs, Mocks):',
+    placeholder: 'Folder name...',
+    confirmText: 'Create Folder',
+  });
+  if (!name) return;
+
+  const newFolder = {
+    id: crypto.randomUUID(),
+    name,
+    workspaceId: activeWorkspaceId,
+    collapsed: false,
+    createdAt: Date.now(),
+  };
+
+  folders.push(newFolder);
+  await saveStorage();
+  renderProfileList();
+  showToast(`Created folder: "${name}"`, 'success');
+}
+
+function toggleFolderCollapse(folderId) {
+  const f = folders.find(x => x.id === folderId);
+  if (!f) return;
+  f.collapsed = !f.collapsed;
+  saveStorage();
+  renderProfileList();
+}
+
+async function setProfileFolder(profileId, folderId) {
+  const p = profiles.find(x => x.id === profileId);
+  if (!p) return;
+  p.folderId = folderId || null;
+  await saveStorage();
+  renderProfileList();
+  renderMainPanel();
+  closeFolderDropdown();
+  const f = folders.find(x => x.id === folderId);
+  showToast(f ? `Moved to folder: "${f.name}"` : 'Moved to root (No folder)', 'info');
+}
+
+function toggleFolderDropdown() {
+  if (!profileFolderDropdown) return;
+  const isHidden = profileFolderDropdown.classList.contains('hidden');
+  if (isHidden) {
+    renderFolderDropdownList();
+    profileFolderDropdown.classList.remove('hidden');
+  } else {
+    profileFolderDropdown.classList.add('hidden');
+  }
+}
+
+function closeFolderDropdown() {
+  if (profileFolderDropdown) profileFolderDropdown.classList.add('hidden');
+}
+
+function renderFolderDropdownList() {
+  if (!profileFolderDropdown) return;
+  profileFolderDropdown.innerHTML = '';
+  const currentProfile = profiles.find(p => p.id === selectedProfileId);
+  if (!currentProfile) return;
+
+  const wsFolders = folders.filter(f => (f.workspaceId || 'default') === activeWorkspaceId);
+
+  // Option 1: No Folder
+  const noFolderItem = document.createElement('div');
+  noFolderItem.className = 'profile-folder-item' + (!currentProfile.folderId ? ' active' : '');
+  noFolderItem.innerHTML = `
+    <svg viewBox="0 0 16 16" fill="currentColor" width="12" height="12" style="color:var(--text-muted);flex-shrink:0;">
+      <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.4"/>
+      <line x1="4" y1="4" x2="12" y2="12" stroke="currentColor" stroke-width="1.4"/>
+    </svg>
+    <span>No Folder (Root)</span>
+  `;
+  noFolderItem.addEventListener('click', () => setProfileFolder(currentProfile.id, null));
+  profileFolderDropdown.appendChild(noFolderItem);
+
+  // Folder options
+  for (const f of wsFolders) {
+    const item = document.createElement('div');
+    item.className = 'profile-folder-item' + (currentProfile.folderId === f.id ? ' active' : '');
+    
+    const svgIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svgIcon.setAttribute('viewBox', '0 0 16 16');
+    svgIcon.setAttribute('width', '12');
+    svgIcon.setAttribute('height', '12');
+    svgIcon.setAttribute('fill', 'currentColor');
+    svgIcon.style.cssText = 'color:#818cf8;flex-shrink:0;';
+    svgIcon.innerHTML = '<path d="M.5 3l.04.87a1.99 1.99 0 0 0-.342 1.311l.637 7A2 2 0 0 0 2.826 14H13.17a2 2 0 0 0 1.991-1.819l.637-7A2 2 0 0 0 13.81 3H9.828a2 2 0 0 1-1.414-.586l-.828-.828A2 2 0 0 0 6.172 1H2.5a2 2 0 0 0-2 2zm1 0a1 1 0 0 1 1-1h3.672a1 1 0 0 1 .707.293l.828.828A3 3 0 0 0 9.828 4h3.982a1 1 0 0 1 .99 1.09l-.637 7a1 1 0 0 1-.996.91H2.826a1 1 0 0 1-.996-.91l-.637-7A1 1 0 0 1 1.5 3z"/>';
+
+    const nameSpan = document.createElement('span');
+    nameSpan.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+    nameSpan.textContent = f.name;
+
+    item.append(svgIcon, nameSpan);
+    item.addEventListener('click', () => setProfileFolder(currentProfile.id, f.id));
+    profileFolderDropdown.appendChild(item);
+  }
+
+  // Option: + New Folder
+  const newFolderItem = document.createElement('div');
+  newFolderItem.className = 'profile-folder-item';
+  newFolderItem.style.borderTop = '1px solid rgba(255,255,255,0.08)';
+  newFolderItem.style.color = 'var(--accent-light)';
+  newFolderItem.innerHTML = `
+    <svg viewBox="0 0 16 16" fill="currentColor" width="12" height="12" style="color:var(--accent-light);flex-shrink:0;">
+      <path d="M8 2a.75.75 0 0 1 .75.75v4.5h4.5a.75.75 0 0 1 0 1.5h-4.5v4.5a.75.75 0 0 1-1.5 0v-4.5h-4.5a.75.75 0 0 1 0-1.5h4.5v-4.5A.75.75 0 0 1 8 2z"/>
+    </svg>
+    <span>Create New Folder...</span>
+  `;
+  newFolderItem.addEventListener('click', async () => {
+    closeFolderDropdown();
+    await handleCreateFolder();
+  });
+  profileFolderDropdown.appendChild(newFolderItem);
+}
+
 // ── Render ────────────────────────────────────────────────────────────────────
 
 function render() {
@@ -872,23 +1302,224 @@ function render() {
   renderMainPanel();
 }
 
+function createProfileListItem(profile, inFolder = false) {
+  const li = document.createElement('li');
+  li.className = 'profile-item'
+    + (inFolder ? ' in-folder' : '')
+    + (profile.id === selectedProfileId ? ' active' : '')
+    + (profile.id === activeProfileId && profile.enabled ? ' enabled' : '');
+  li.dataset.id = profile.id;
+  if (inFolder) li.title = `Profile: ${profile.name} (in folder)`;
+
+  // HTML5 Drag & Drop Support
+  li.setAttribute('draggable', 'true');
+  li.addEventListener('dragstart', (e) => {
+    e.dataTransfer.setData('text/plain', profile.id);
+    e.dataTransfer.effectAllowed = 'move';
+    li.classList.add('dragging');
+  });
+  li.addEventListener('dragend', () => {
+    li.classList.remove('dragging');
+    document.querySelectorAll('.drag-target-hover').forEach(el => el.classList.remove('drag-target-hover'));
+  });
+
+  const dot = document.createElement('span');
+  dot.className = 'profile-dot';
+  const label = document.createElement('span');
+  label.className = 'profile-label';
+  label.textContent = profile.name;
+
+  li.append(dot, label);
+  li.addEventListener('click', () => selectProfile(profile.id));
+  return li;
+}
+
 function renderProfileList() {
+  if (!profileList) return;
   profileList.innerHTML = '';
-  for (const profile of profiles) {
-    const li = document.createElement('li');
-    li.className = 'profile-item'
-      + (profile.id === selectedProfileId ? ' active' : '')
-      + (profile.id === activeProfileId && profile.enabled ? ' enabled' : '');
-    li.dataset.id = profile.id;
 
-    const dot   = document.createElement('span'); dot.className = 'profile-dot';
-    const label = document.createElement('span');
-    label.className = 'profile-label';
-    label.textContent = profile.name;
+  const currentWs = getActiveWorkspace();
+  if (currentWorkspaceName) currentWorkspaceName.textContent = currentWs.name;
 
-    li.append(dot, label);
-    li.addEventListener('click', () => selectProfile(profile.id));
-    profileList.appendChild(li);
+  const wsProfiles = profiles.filter(p => (p.workspaceId || 'default') === activeWorkspaceId);
+  const wsFolders = folders.filter(f => (f.workspaceId || 'default') === activeWorkspaceId);
+
+  // 1. Render Folders
+  for (const folder of wsFolders) {
+    const folderProfiles = wsProfiles.filter(p => p.folderId === folder.id);
+    const folderGroup = document.createElement('div');
+    folderGroup.className = 'folder-group' + (folder.collapsed ? ' collapsed' : ' expanded');
+
+    const folderHeader = document.createElement('div');
+    folderHeader.className = 'folder-header' + (folder.collapsed ? ' collapsed' : ' expanded');
+
+    const titleLeft = document.createElement('div');
+    titleLeft.className = 'folder-title-left';
+
+    // SVG Chevron for folding
+    const chevronSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    chevronSvg.setAttribute('viewBox', '0 0 16 16');
+    chevronSvg.setAttribute('width', '10');
+    chevronSvg.setAttribute('height', '10');
+    chevronSvg.setAttribute('fill', 'currentColor');
+    chevronSvg.setAttribute('class', 'folder-chevron-svg' + (folder.collapsed ? ' collapsed' : ''));
+    chevronSvg.innerHTML = '<path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>';
+
+    // SVG Folder Icon (Open when expanded, closed when collapsed)
+    const folderSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    folderSvg.setAttribute('viewBox', '0 0 16 16');
+    folderSvg.setAttribute('fill', 'currentColor');
+    folderSvg.setAttribute('class', 'folder-icon-svg');
+    if (folder.collapsed) {
+      folderSvg.innerHTML = '<path d="M.5 3l.04.87a1.99 1.99 0 0 0-.342 1.311l.637 7A2 2 0 0 0 2.826 14H13.17a2 2 0 0 0 1.991-1.819l.637-7A2 2 0 0 0 13.81 3H9.828a2 2 0 0 1-1.414-.586l-.828-.828A2 2 0 0 0 6.172 1H2.5a2 2 0 0 0-2 2zm1 0a1 1 0 0 1 1-1h3.672a1 1 0 0 1 .707.293l.828.828A3 3 0 0 0 9.828 4h3.982a1 1 0 0 1 .99 1.09l-.637 7a1 1 0 0 1-.996.91H2.826a1 1 0 0 1-.996-.91l-.637-7A1 1 0 0 1 1.5 3z"/>';
+    } else {
+      folderSvg.innerHTML = '<path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h2.764c.958 0 1.76.6 2.06 1.455l.235.666A.5.5 0 0 0 8.03 4.5H13.5A1.5 1.5 0 0 1 15 6v1H1V3.5zM15 8H1v5.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5V8z"/>';
+    }
+
+    const folderName = document.createElement('span');
+    folderName.className = 'folder-name';
+    folderName.textContent = folder.name;
+
+    titleLeft.append(chevronSvg, folderSvg, folderName);
+
+    // Folder Actions: Quick Add Profile & Count Badge
+    const folderActions = document.createElement('div');
+    folderActions.className = 'folder-actions';
+
+    const addProfileBtn = document.createElement('button');
+    addProfileBtn.className = 'folder-add-profile-btn';
+    addProfileBtn.setAttribute('title', 'Add profile in this folder');
+    addProfileBtn.setAttribute('aria-label', 'Add profile in this folder');
+    addProfileBtn.innerHTML = '<svg viewBox="0 0 16 16" width="9" height="9" fill="currentColor"><path d="M8 2a.75.75 0 0 1 .75.75v4.5h4.5a.75.75 0 0 1 0 1.5h-4.5v4.5a.75.75 0 0 1-1.5 0v-4.5h-4.5a.75.75 0 0 1 0-1.5h4.5v-4.5A.75.75 0 0 1 8 2z"/></svg>';
+    addProfileBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      addProfile(folder.id);
+    });
+
+    const count = document.createElement('span');
+    count.className = 'folder-count';
+    count.textContent = folderProfiles.length;
+
+    folderActions.append(addProfileBtn, count);
+    folderHeader.append(titleLeft, folderActions);
+    folderHeader.addEventListener('click', () => toggleFolderCollapse(folder.id));
+
+    // Drag and drop onto folder header
+    folderHeader.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      folderHeader.classList.add('drag-target-hover');
+    });
+    folderHeader.addEventListener('dragleave', (e) => {
+      if (!folderHeader.contains(e.relatedTarget)) {
+        folderHeader.classList.remove('drag-target-hover');
+      }
+    });
+    folderHeader.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      folderHeader.classList.remove('drag-target-hover');
+      const profileId = e.dataTransfer.getData('text/plain');
+      if (!profileId) return;
+      const p = profiles.find(x => x.id === profileId);
+      if (!p || p.folderId === folder.id) return;
+      p.folderId = folder.id;
+      folder.collapsed = false;
+      await saveStorage();
+      render();
+      showToast(`Moved "${p.name}" to folder "${folder.name}"`, 'success');
+    });
+
+    const folderItems = document.createElement('ul');
+    folderItems.className = 'folder-items' + (folder.collapsed ? ' collapsed' : '');
+
+    // Allow dropping onto folder items list too
+    folderItems.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      folderItems.classList.add('drag-target-hover');
+    });
+    folderItems.addEventListener('dragleave', (e) => {
+      if (!folderItems.contains(e.relatedTarget)) {
+        folderItems.classList.remove('drag-target-hover');
+      }
+    });
+    folderItems.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      folderItems.classList.remove('drag-target-hover');
+      const profileId = e.dataTransfer.getData('text/plain');
+      if (!profileId) return;
+      const p = profiles.find(x => x.id === profileId);
+      if (!p || p.folderId === folder.id) return;
+      p.folderId = folder.id;
+      folder.collapsed = false;
+      await saveStorage();
+      render();
+      showToast(`Moved "${p.name}" to folder "${folder.name}"`, 'success');
+    });
+
+    for (const p of folderProfiles) {
+      folderItems.appendChild(createProfileListItem(p, true));
+    }
+
+    // If empty folder, show friendly prompt to add or drop
+    if (folderProfiles.length === 0) {
+      const emptyHint = document.createElement('li');
+      emptyHint.className = 'folder-empty-hint';
+      emptyHint.textContent = '+ Add profile here';
+      emptyHint.addEventListener('click', () => addProfile(folder.id));
+      folderItems.appendChild(emptyHint);
+    }
+
+    folderGroup.append(folderHeader, folderItems);
+    profileList.appendChild(folderGroup);
+  }
+
+  // 2. Render Ungrouped / Root Profiles
+  const rootProfiles = wsProfiles.filter(p => !p.folderId || !wsFolders.some(f => f.id === p.folderId));
+  if (wsFolders.length > 0 && rootProfiles.length > 0) {
+    const divider = document.createElement('div');
+    divider.className = 'sidebar-section-divider';
+    divider.innerHTML = '<span class="sidebar-section-divider-text">Ungrouped</span>';
+    profileList.appendChild(divider);
+  }
+  for (const p of rootProfiles) {
+    profileList.appendChild(createProfileListItem(p, false));
+  }
+
+  // 3. Root Drop Zone (if folders exist, allow dragging profiles back out to Root)
+  if (wsFolders.length > 0) {
+    const rootDropZone = document.createElement('div');
+    rootDropZone.className = 'root-drop-zone';
+    rootDropZone.textContent = 'Drop here for Root (No Folder)';
+    rootDropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      rootDropZone.classList.add('drag-target-hover');
+    });
+    rootDropZone.addEventListener('dragleave', () => {
+      rootDropZone.classList.remove('drag-target-hover');
+    });
+    rootDropZone.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      rootDropZone.classList.remove('drag-target-hover');
+      const profileId = e.dataTransfer.getData('text/plain');
+      if (!profileId) return;
+      const p = profiles.find(x => x.id === profileId);
+      if (!p || !p.folderId) return;
+      p.folderId = null;
+      await saveStorage();
+      render();
+      showToast(`Moved "${p.name}" to Root`, 'info');
+    });
+    profileList.appendChild(rootDropZone);
+  }
+
+  // If no profiles exist in this workspace
+  if (wsProfiles.length === 0) {
+    const emptyLi = document.createElement('li');
+    emptyLi.style.cssText = 'padding:14px 8px;font-size:10.5px;color:var(--text-muted);text-align:center;line-height:1.4;';
+    emptyLi.textContent = 'No profiles in this workspace. Click + to create one.';
+    profileList.appendChild(emptyLi);
   }
 }
 
@@ -944,6 +1575,19 @@ function renderMainPanel() {
   ruleSearchQuery = ''; // Reset search on profile switch
   if (ruleSearchInput) ruleSearchInput.value = '';
   if (ruleSearchClear) ruleSearchClear.classList.add('hidden');
+
+  // Update Folder Badge in topbar
+  if (profileFolderBadgeText) {
+    const currentFolder = folders.find(f => f.id === profile.folderId);
+    profileFolderBadgeText.textContent = currentFolder ? currentFolder.name : 'No Folder';
+  }
+
+  // Update Cookie Vault count in profile action bar
+  if (profileCookiesCount) {
+    const totalCookies = cookieVault.reduce((acc, s) => acc + (s.cookies || []).length, 0);
+    profileCookiesCount.textContent = String(totalCookies);
+  }
+
   renderTabCounts(profile);
   renderCustomVars(profile);
   renderTab(profile);
@@ -1065,10 +1709,30 @@ function buildHeaderCard(rule) {
   const nameInput  = makeInput('', 'Header-Name', rule.name, true);
   nameInput.addEventListener('change', () => updateRuleField('headers', rule.id, 'name', nameInput.value));
 
-  const opSelect = makeSelect('rule-select', [['set','set'],['append','append'],['remove','remove']], rule.operation);
-  opSelect.addEventListener('change', () => updateRuleField('headers', rule.id, 'operation', opSelect.value));
+  const opSelect = makeSelect('rule-select rule-op-select', [['set','Set'],['append','Append'],['remove','Remove']], rule.operation || 'set');
+  opSelect.dataset.op = rule.operation || 'set';
 
   const valInput = makeInput('', 'Value  ({{$uuid}}, {{$timestamp}})', rule.value, true);
+  if (rule.operation === 'remove') {
+    valInput.disabled = true;
+    valInput.placeholder = '(Header will be removed)';
+    valInput.classList.add('disabled-val');
+  }
+
+  opSelect.addEventListener('change', () => {
+    opSelect.dataset.op = opSelect.value;
+    updateRuleField('headers', rule.id, 'operation', opSelect.value);
+    if (opSelect.value === 'remove') {
+      valInput.disabled = true;
+      valInput.placeholder = '(Header will be removed)';
+      valInput.classList.add('disabled-val');
+    } else {
+      valInput.disabled = false;
+      valInput.placeholder = 'Value  ({{$uuid}}, {{$timestamp}})';
+      valInput.classList.remove('disabled-val');
+    }
+  });
+
   valInput.addEventListener('change', () => updateRuleField('headers', rule.id, 'value', valInput.value));
 
   const del = makeDeleteBtn();
@@ -1569,12 +2233,26 @@ function selectProfile(id) {
   render();
 }
 
-async function addProfile() {
+async function addProfile(targetFolderId = null) {
+  const folderId = (typeof targetFolderId === 'string') ? targetFolderId : null;
+  const targetFolder = folderId ? folders.find(f => f.id === folderId) : null;
   const p = {
-    id: crypto.randomUUID(), name: 'New Profile',
-    urlFilter: '', useRegex: false, enabled: false,
-    headers: [], redirects: [], queryParams: [], mocks: [], customVars: [],
+    id: crypto.randomUUID(),
+    name: targetFolder ? `${targetFolder.name} Profile` : 'New Profile',
+    workspaceId: activeWorkspaceId,
+    folderId: folderId,
+    urlFilter: '',
+    useRegex: false,
+    enabled: false,
+    headers: [],
+    redirects: [],
+    queryParams: [],
+    mocks: [],
+    customVars: [],
   };
+  if (targetFolder && targetFolder.collapsed) {
+    targetFolder.collapsed = false;
+  }
   profiles.push(p);
   selectedProfileId = p.id;
   if (!activeProfileId) activeProfileId = p.id;
@@ -1582,6 +2260,7 @@ async function addProfile() {
   render();
   profileNameInput.focus();
   profileNameInput.select();
+  showToast(targetFolder ? `Created profile in folder: "${targetFolder.name}"` : 'Created new profile', 'success');
 }
 
 async function deleteProfile() {
@@ -1618,127 +2297,1268 @@ function exportProfile() {
   showToast('Profile exported', 'success');
 }
 
-async function importProfile(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  try {
-    const data = JSON.parse(await file.text());
-    const incoming = Array.isArray(data) ? data : [data];
-    let imported = 0;
-    for (const raw of incoming) {
-      if (!raw.name || !Array.isArray(raw.headers)) continue;
-      profiles.push(migrateProfile({ ...raw, id: crypto.randomUUID(), enabled: false }));
-      imported++;
+// ── Universal Import Hub & Parsers (Postman, cURL, ModHeader, Native JSON) ──
+
+function parseCurlCommand(curlStr) {
+  if (!curlStr || typeof curlStr !== 'string') return null;
+  const trimmed = curlStr.trim();
+  if (!trimmed) return null;
+
+  // Clean up line continuations (Unix \ and Windows ^)
+  const cleanCmd = trimmed.replace(/\\\r?\n/g, ' ').replace(/\^\r?\n/g, ' ');
+
+  // Extract URL: match http/https URL in quotes or bare
+  let url = '';
+  const urlMatch = cleanCmd.match(/https?:\/\/[^\s'"]+/i) || cleanCmd.match(/['"](https?:\/\/[^'"]+)['"]/i);
+  if (urlMatch) {
+    url = urlMatch[1] || urlMatch[0];
+  } else {
+    // Check for bare URL or host/path
+    const bareMatch = cleanCmd.match(/(?:curl\s+)?['"]?([a-z0-9.-]+\.[a-z]{2,}(?:\/[^\s'"]*)?)['"]?/i);
+    if (bareMatch) {
+      url = bareMatch[1];
     }
-    if (!imported) { showToast('No valid profiles found', 'error'); return; }
-    selectedProfileId = profiles.at(-1).id;
-    await saveStorage(); render();
-    showToast(`Imported ${imported} profile${imported > 1 ? 's' : ''}`, 'success');
-  } catch (_) {
-    showToast('Invalid JSON file', 'error');
-  } finally { e.target.value = ''; }
+  }
+
+  // Parse HTTP Method
+  let method = 'GET';
+  const methodMatch = cleanCmd.match(/(?:-X|--request)\s+['"]?([A-Z]+)['"]?/i);
+  if (methodMatch) {
+    method = methodMatch[1].toUpperCase();
+  } else if (cleanCmd.includes('-d ') || cleanCmd.includes('--data') || cleanCmd.includes('--data-raw') || cleanCmd.includes('--data-binary')) {
+    method = 'POST';
+  }
+
+  // Parse Headers (-H or --header)
+  const headers = [];
+  const headerRegex = /(?:-H|--header)\s+(?:'([^']+)'|"([^"]+)"|([^\s'"]+))/gi;
+  let match;
+  while ((match = headerRegex.exec(cleanCmd)) !== null) {
+    const rawH = match[1] || match[2] || match[3];
+    if (rawH && rawH.includes(':')) {
+      const colonIdx = rawH.indexOf(':');
+      const name = rawH.slice(0, colonIdx).trim();
+      const value = rawH.slice(colonIdx + 1).trim();
+      if (name) {
+        headers.push({
+          id: crypto.randomUUID(),
+          enabled: true,
+          name,
+          value,
+          operation: 'set',
+          type: 'request',
+        });
+      }
+    }
+  }
+
+  // Parse User-Agent (-A / --user-agent)
+  const uaMatch = cleanCmd.match(/(?:-A|--user-agent)\s+(?:'([^']+)'|"([^"]+)"|([^\s'"]+))/i);
+  if (uaMatch) {
+    const ua = uaMatch[1] || uaMatch[2] || uaMatch[3];
+    if (ua && !headers.some(h => h.name.toLowerCase() === 'user-agent')) {
+      headers.push({ id: crypto.randomUUID(), enabled: true, name: 'User-Agent', value: ua, operation: 'set', type: 'request' });
+    }
+  }
+
+  // Parse Basic Auth (-u / --user)
+  const authMatch = cleanCmd.match(/(?:-u|--user)\s+(?:'([^']+)'|"([^"]+)"|([^\s'"]+))/i);
+  if (authMatch) {
+    const userPass = authMatch[1] || authMatch[2] || authMatch[3];
+    if (userPass && !headers.some(h => h.name.toLowerCase() === 'authorization')) {
+      headers.push({ id: crypto.randomUUID(), enabled: true, name: 'Authorization', value: `Basic ${btoa(userPass)}`, operation: 'set', type: 'request' });
+    }
+  }
+
+  // Parse Cookie (-b / --cookie)
+  const cookieMatch = cleanCmd.match(/(?:-b|--cookie)\s+(?:'([^']+)'|"([^"]+)"|([^\s'"]+))/i);
+  if (cookieMatch) {
+    const cookie = cookieMatch[1] || cookieMatch[2] || cookieMatch[3];
+    if (cookie && !headers.some(h => h.name.toLowerCase() === 'cookie')) {
+      headers.push({ id: crypto.randomUUID(), enabled: true, name: 'Cookie', value: cookie, operation: 'set', type: 'request' });
+    }
+  }
+
+  // Parse Referer (-e / --referer)
+  const refMatch = cleanCmd.match(/(?:-e|--referer)\s+(?:'([^']+)'|"([^"]+)"|([^\s'"]+))/i);
+  if (refMatch) {
+    const ref = refMatch[1] || refMatch[2] || refMatch[3];
+    if (ref && !headers.some(h => h.name.toLowerCase() === 'referer')) {
+      headers.push({ id: crypto.randomUUID(), enabled: true, name: 'Referer', value: ref, operation: 'set', type: 'request' });
+    }
+  }
+
+  // Parse URL & Query Parameters
+  const queryParams = [];
+  let urlFilter = '';
+  let profileName = 'cURL Import';
+
+  if (url) {
+    try {
+      const fullUrl = url.startsWith('http') ? url : `https://${url}`;
+      const parsedUrl = new URL(fullUrl);
+      urlFilter = parsedUrl.hostname;
+      profileName = `cURL: ${parsedUrl.hostname}${parsedUrl.pathname !== '/' ? parsedUrl.pathname.slice(0, 18) : ''}`;
+
+      const params = [];
+      parsedUrl.searchParams.forEach((val, key) => {
+        params.push({ key, value: val });
+      });
+
+      if (params.length > 0) {
+        queryParams.push({
+          id: crypto.randomUUID(),
+          enabled: true,
+          urlFilter: parsedUrl.hostname,
+          useRegex: false,
+          addOrReplace: params,
+          remove: [],
+        });
+      }
+    } catch (_) {
+      urlFilter = url.split('?')[0];
+    }
+  }
+
+  // If no headers or url found, not a valid cURL
+  if (headers.length === 0 && queryParams.length === 0 && !urlFilter) {
+    return null;
+  }
+
+  return {
+    id: crypto.randomUUID(),
+    name: profileName,
+    enabled: false,
+    urlFilter,
+    useRegex: false,
+    headers,
+    redirects: [],
+    queryParams,
+    mocks: [],
+    customVars: [],
+  };
 }
 
-// ── ModHeader / Requestly Import ──────────────────────────────────────────────
+function parsePostman(json) {
+  if (!json || typeof json !== 'object') return null;
+
+  // Postman Environment check
+  const isEnv = json.values && Array.isArray(json.values) && (json._postman_variable_scope === 'environment' || json.name);
+  if (isEnv) {
+    const customVars = json.values
+      .filter(v => v.key && v.enabled !== false)
+      .map(v => ({ key: v.key.replace(/^\{\{|\}\}$/g, '').trim(), value: v.value ?? '' }));
+
+    return [{
+      id: crypto.randomUUID(),
+      name: `Postman Env: ${json.name || 'Environment'}`,
+      enabled: false,
+      urlFilter: '',
+      useRegex: false,
+      headers: [],
+      redirects: [],
+      queryParams: [],
+      mocks: [],
+      customVars,
+    }];
+  }
+
+  // Postman Collection check
+  const isCollection = json.info && (json.item || json.info.schema);
+  if (!isCollection) return null;
+
+  const collectionName = json.info?.name || 'Postman Collection';
+  const customVars = (json.variable || [])
+    .filter(v => v.key)
+    .map(v => ({ key: v.key.replace(/^\{\{|\}\}$/g, '').trim(), value: v.value ?? '' }));
+
+  const items = [];
+  function extractItems(arr) {
+    if (!Array.isArray(arr)) return;
+    for (const it of arr) {
+      if (it.request) items.push(it);
+      if (it.item) extractItems(it.item);
+    }
+  }
+  extractItems(json.item);
+
+  if (items.length === 0) return null;
+
+  const allHeaders = [];
+  const allQueryParams = [];
+  const allMocks = [];
+  let detectedHost = '';
+
+  for (const it of items) {
+    const req = it.request;
+    if (!req) continue;
+
+    // Headers
+    if (Array.isArray(req.header)) {
+      for (const h of req.header) {
+        if (!h.key || h.disabled) continue;
+        if (!allHeaders.some(existing => existing.name.toLowerCase() === h.key.toLowerCase() && existing.value === h.value)) {
+          allHeaders.push({
+            id: crypto.randomUUID(),
+            enabled: true,
+            name: h.key,
+            value: h.value ?? '',
+            operation: 'set',
+            type: 'request',
+          });
+        }
+      }
+    }
+
+    // Auth (Bearer, Basic, ApiKey)
+    if (req.auth) {
+      const authType = req.auth.type;
+      if (authType === 'bearer' && Array.isArray(req.auth.bearer)) {
+        const tokenObj = req.auth.bearer.find(b => b.key === 'token');
+        if (tokenObj?.value && !allHeaders.some(h => h.name.toLowerCase() === 'authorization')) {
+          allHeaders.push({
+            id: crypto.randomUUID(),
+            enabled: true,
+            name: 'Authorization',
+            value: `Bearer ${tokenObj.value}`,
+            operation: 'set',
+            type: 'request',
+          });
+        }
+      } else if (authType === 'basic' && Array.isArray(req.auth.basic)) {
+        const u = req.auth.basic.find(b => b.key === 'username')?.value ?? '';
+        const p = req.auth.basic.find(b => b.key === 'password')?.value ?? '';
+        if ((u || p) && !allHeaders.some(h => h.name.toLowerCase() === 'authorization')) {
+          allHeaders.push({
+            id: crypto.randomUUID(),
+            enabled: true,
+            name: 'Authorization',
+            value: `Basic ${btoa(u + ':' + p)}`,
+            operation: 'set',
+            type: 'request',
+          });
+        }
+      } else if (authType === 'apikey' && Array.isArray(req.auth.apikey)) {
+        const k = req.auth.apikey.find(b => b.key === 'key')?.value || 'X-API-Key';
+        const v = req.auth.apikey.find(b => b.key === 'value')?.value ?? '';
+        if (v && !allHeaders.some(h => h.name.toLowerCase() === k.toLowerCase())) {
+          allHeaders.push({
+            id: crypto.randomUUID(),
+            enabled: true,
+            name: k,
+            value: v,
+            operation: 'set',
+            type: 'request',
+          });
+        }
+      }
+    }
+
+    // URL & Query params
+    let reqUrl = '';
+    if (typeof req.url === 'string') {
+      reqUrl = req.url;
+    } else if (req.url && typeof req.url === 'object') {
+      reqUrl = req.url.raw || '';
+      if (Array.isArray(req.url.query) && req.url.query.length > 0) {
+        const queryList = req.url.query
+          .filter(q => q.key && !q.disabled)
+          .map(q => ({ key: q.key, value: q.value ?? '' }));
+        if (queryList.length > 0) {
+          allQueryParams.push({
+            id: crypto.randomUUID(),
+            enabled: true,
+            urlFilter: req.url.host ? (Array.isArray(req.url.host) ? req.url.host.join('.') : req.url.host) : '',
+            useRegex: false,
+            addOrReplace: queryList,
+            remove: [],
+          });
+        }
+      }
+    }
+
+    if (reqUrl && !detectedHost) {
+      try {
+        const match = reqUrl.match(/https?:\/\/([^/?#]+)/i);
+        if (match) detectedHost = match[1];
+      } catch (_) {}
+    }
+
+    // Saved Mock responses
+    if (Array.isArray(it.response) && it.response.length > 0) {
+      for (const res of it.response) {
+        if (res.body || res.code) {
+          allMocks.push({
+            id: crypto.randomUUID(),
+            enabled: true,
+            method: req.method || '*',
+            urlFilter: reqUrl.split('?')[0] || `/${it.name.toLowerCase().replace(/\s+/g, '-')}`,
+            useRegex: false,
+            statusCode: res.code || 200,
+            contentType: 'application/json',
+            responseBody: res.body ?? '{\n  "mocked": true\n}',
+            delayMs: 0,
+          });
+        }
+      }
+    }
+  }
+
+  return [{
+    id: crypto.randomUUID(),
+    name: `Postman: ${collectionName}`,
+    enabled: false,
+    urlFilter: detectedHost || '',
+    useRegex: false,
+    headers: allHeaders,
+    redirects: [],
+    queryParams: allQueryParams,
+    mocks: allMocks,
+    customVars,
+  }];
+}
+
+function parseModHeader(raw) {
+  if (!raw) return null;
+  const items = Array.isArray(raw) ? raw
+    : raw.profiles ? raw.profiles
+    : raw.rules    ? raw.rules
+    : [raw];
+
+  const results = [];
+  let imported = 0;
+
+  for (const item of items) {
+    // ModHeader format
+    if (item.headers || item.respHeaders || item.filters) {
+      const urlFilter = item.filters?.[0]?.pattern ?? '';
+      const headers = [
+        ...(item.headers ?? []).map(h => ({
+          id: crypto.randomUUID(), enabled: h.enabled ?? true,
+          name: h.name, value: h.value ?? '', operation: 'set', type: 'request',
+        })),
+        ...(item.respHeaders ?? []).map(h => ({
+          id: crypto.randomUUID(), enabled: h.enabled ?? true,
+          name: h.name, value: h.value ?? '', operation: 'set', type: 'response',
+        })),
+      ];
+      const redirects = (item.urlReplacements ?? []).map(r => ({
+        id: crypto.randomUUID(), enabled: r.enabled ?? true,
+        fromUrl: r.name ?? '', toUrl: r.value ?? '',
+        useRegex: false, resourceTypes: [],
+      }));
+
+      results.push({
+        id: crypto.randomUUID(), enabled: false,
+        name: item.title ?? item.name ?? `Imported ${imported + 1}`,
+        urlFilter, useRegex: false,
+        headers, redirects, queryParams: [], mocks: [],
+      });
+      imported++;
+      continue;
+    }
+
+    // Requestly Headers
+    if (item.ruleType === 'HEADERS' && item.pairs) {
+      const headers = [];
+      for (const pair of item.pairs) {
+        const src = pair.source?.value ?? '';
+        for (const [kind, type] of [['Request', 'request'], ['Response', 'response']]) {
+          for (const mod of pair.modifications?.[kind] ?? []) {
+            headers.push({
+              id: crypto.randomUUID(), enabled: true,
+              name: mod.header, value: mod.value ?? '',
+              operation: (mod.type ?? 'Add').toLowerCase() === 'remove' ? 'remove' : 'set',
+              type,
+            });
+          }
+        }
+        results.push({
+          id: crypto.randomUUID(), enabled: false,
+          name: item.name ?? `Requestly ${imported + 1}`,
+          urlFilter: src, useRegex: false,
+          headers, redirects: [], queryParams: [], mocks: [],
+        });
+        imported++;
+      }
+      continue;
+    }
+
+    // Requestly Redirects
+    if (item.ruleType === 'REDIRECT' && item.pairs) {
+      const redirects = item.pairs.map(pair => ({
+        id: crypto.randomUUID(), enabled: true,
+        fromUrl: pair.source?.value ?? '',
+        toUrl: pair.destination ?? '',
+        useRegex: pair.source?.operator === 'Matches',
+        resourceTypes: [],
+      }));
+      results.push({
+        id: crypto.randomUUID(), enabled: false,
+        name: item.name ?? `Redirect Import ${imported + 1}`,
+        urlFilter: '', useRegex: false,
+        headers: [], redirects, queryParams: [], mocks: [],
+      });
+      imported++;
+    }
+  }
+
+  return results.length > 0 ? results : null;
+}
+
+function parseHeaderCraft(data) {
+  if (!data) return null;
+  const incoming = Array.isArray(data) ? data : [data];
+  const results = [];
+  for (const raw of incoming) {
+    if (!raw || typeof raw !== 'object') continue;
+    if (raw.name && (Array.isArray(raw.headers) || Array.isArray(raw.redirects) || Array.isArray(raw.queryParams) || Array.isArray(raw.mocks))) {
+      results.push({
+        ...raw,
+        id: crypto.randomUUID(),
+        enabled: false,
+      });
+    }
+  }
+  return results.length > 0 ? results : null;
+}
+
+// ── Cookie Vault Helper for Importers ──
+function addCookieToVault(domain, cookieObj) {
+  if (!domain || !cookieObj || !cookieObj.name) return;
+  const cleanDomain = domain.trim().replace(/^https?:\/\//i, '').replace(/\/.*$/, '').replace(/^\*?\./, '');
+  if (!cleanDomain) return;
+
+  let store = cookieVault.find(s => s.domain === cleanDomain);
+  if (!store) {
+    store = {
+      id: crypto.randomUUID(),
+      domain: cleanDomain,
+      enabled: true,
+      cookies: [],
+    };
+    cookieVault.push(store);
+  }
+
+  const existingIdx = store.cookies.findIndex(c => c.name === cookieObj.name);
+  if (existingIdx >= 0) {
+    store.cookies[existingIdx] = { ...store.cookies[existingIdx], ...cookieObj };
+  } else {
+    store.cookies.push({
+      id: crypto.randomUUID(),
+      name: cookieObj.name,
+      value: cookieObj.value ?? '',
+      path: cookieObj.path || '/',
+      enabled: cookieObj.enabled !== false,
+      secure: !!cookieObj.secure,
+      httpOnly: !!cookieObj.httpOnly,
+    });
+  }
+}
+
+// ── Insomnia v4/v5 Parser ──
+function parseInsomnia(json) {
+  if (!json || typeof json !== 'object') return null;
+  const isInsomnia = json._type === 'export' || Array.isArray(json.resources);
+  if (!isInsomnia) return null;
+
+  const resources = json.resources || [];
+  const reqs = resources.filter(r => r._type === 'request');
+  const envs = resources.filter(r => r._type === 'environment');
+  const cookieJars = resources.filter(r => r._type === 'cookie_jar');
+  const workspace = resources.find(r => r._type === 'workspace');
+
+  // Extract variables
+  const customVars = [];
+  for (const env of envs) {
+    if (env.data && typeof env.data === 'object') {
+      for (const [k, v] of Object.entries(env.data)) {
+        if (k && !customVars.some(cv => cv.key === k)) {
+          customVars.push({ id: crypto.randomUUID(), key: k, value: String(v ?? '') });
+        }
+      }
+    }
+  }
+
+  // Extract cookies into Cookie Vault
+  for (const cj of cookieJars) {
+    for (const c of cj.cookies || []) {
+      if (c && c.key && c.domain) {
+        addCookieToVault(c.domain, {
+          name: c.key,
+          value: c.value ?? '',
+          path: c.path || '/',
+          enabled: !c.disabled,
+          secure: !!c.secure,
+          httpOnly: !!c.httpOnly,
+        });
+      }
+    }
+  }
+
+  const allHeaders = [];
+  const allQueryParams = [];
+  let detectedHost = '';
+
+  for (const req of reqs) {
+    if (req.url && !detectedHost) {
+      try { detectedHost = new URL(req.url).hostname; } catch (_) {}
+    }
+
+    for (const h of req.headers || []) {
+      if (h.name && h.name.trim() && !allHeaders.some(ex => ex.name.toLowerCase() === h.name.trim().toLowerCase() && ex.value === h.value)) {
+        allHeaders.push({
+          id: crypto.randomUUID(),
+          name: h.name.trim(),
+          value: h.value ?? '',
+          operation: 'set',
+          type: 'request',
+          enabled: h.disabled !== true,
+        });
+      }
+    }
+
+    if (req.authentication) {
+      const auth = req.authentication;
+      if (auth.type === 'bearer' && auth.token && !allHeaders.some(h => h.name.toLowerCase() === 'authorization')) {
+        allHeaders.push({
+          id: crypto.randomUUID(),
+          name: 'Authorization',
+          value: `Bearer ${auth.token}`,
+          operation: 'set',
+          type: 'request',
+          enabled: auth.disabled !== true,
+        });
+      } else if (auth.type === 'basic' && (auth.username || auth.password) && !allHeaders.some(h => h.name.toLowerCase() === 'authorization')) {
+        try {
+          const basic = btoa(`${auth.username || ''}:${auth.password || ''}`);
+          allHeaders.push({
+            id: crypto.randomUUID(),
+            name: 'Authorization',
+            value: `Basic ${basic}`,
+            operation: 'set',
+            type: 'request',
+            enabled: auth.disabled !== true,
+          });
+        } catch (_) {}
+      } else if (auth.type === 'apikey' && auth.key && auth.value) {
+        allHeaders.push({
+          id: crypto.randomUUID(),
+          name: auth.key,
+          value: auth.value,
+          operation: 'set',
+          type: 'request',
+          enabled: auth.disabled !== true,
+        });
+      }
+    }
+
+    if (Array.isArray(req.parameters)) {
+      const addParams = req.parameters
+        .filter(p => p.name && p.name.trim())
+        .map(p => ({ key: p.name.trim(), value: p.value ?? '' }));
+      if (addParams.length > 0) {
+        allQueryParams.push({
+          id: crypto.randomUUID(),
+          enabled: true,
+          urlFilter: req.url || '',
+          useRegex: false,
+          addOrReplace: addParams,
+          remove: [],
+        });
+      }
+    }
+  }
+
+  saveStorage();
+  return [{
+    id: crypto.randomUUID(),
+    name: 'Insomnia: ' + (workspace?.name || 'Workspace'),
+    enabled: false,
+    urlFilter: detectedHost ? `*${detectedHost}*` : '',
+    useRegex: false,
+    headers: allHeaders,
+    redirects: [],
+    queryParams: allQueryParams,
+    mocks: [],
+    customVars,
+  }];
+}
+
+// ── Bruno Collection & .bru Parser ──
+function parseBruno(text, json) {
+  // If JSON format
+  if (json && (json.version === '1' || json.bruno || Array.isArray(json.requests) || (json.name && json.type === 'collection'))) {
+    const headers = [];
+    const queryParams = [];
+    const customVars = [];
+    let host = '';
+
+    const reqList = json.requests || (json.items || []).map(i => i.request).filter(Boolean);
+    for (const req of reqList) {
+      if (req.url && !host) {
+        try { host = new URL(req.url).hostname; } catch (_) {}
+      }
+      for (const h of req.headers || []) {
+        if (h.name && !headers.some(ex => ex.name.toLowerCase() === h.name.toLowerCase())) {
+          headers.push({ id: crypto.randomUUID(), name: h.name, value: h.value ?? '', operation: 'set', type: 'request', enabled: h.enabled !== false });
+        }
+      }
+    }
+
+    return [{
+      id: crypto.randomUUID(),
+      name: 'Bruno: ' + (json.name || 'Collection'),
+      enabled: false,
+      urlFilter: host ? `*${host}*` : '',
+      useRegex: false,
+      headers,
+      redirects: [],
+      queryParams,
+      mocks: [],
+      customVars,
+    }];
+  }
+
+  // If .bru text format
+  if (typeof text === 'string' && (text.includes('meta {') || text.includes('headers {') || text.includes('vars {') || text.includes('vars:pre-request {'))) {
+    const nameMatch = text.match(/name:\s*(.+)/i);
+    const name = nameMatch ? nameMatch[1].trim() : 'Bruno Request';
+
+    let url = '';
+    const httpMatch = text.match(/(get|post|put|delete|patch|options|head)\s*\{\s*url:\s*(.+?)\s*\}/i);
+    if (httpMatch) {
+      url = httpMatch[2].trim();
+    }
+
+    const headers = [];
+    const headersBlock = text.match(/headers\s*\{([\s\S]*?)\}/i);
+    if (headersBlock) {
+      const lines = headersBlock[1].split('\n');
+      for (const line of lines) {
+        const colonIdx = line.indexOf(':');
+        if (colonIdx > 0) {
+          const hName = line.slice(0, colonIdx).trim();
+          const hVal = line.slice(colonIdx + 1).trim();
+          if (hName && !hName.startsWith('~')) {
+            headers.push({
+              id: crypto.randomUUID(),
+              name: hName,
+              value: hVal,
+              operation: 'set',
+              type: 'request',
+              enabled: true,
+            });
+          }
+        }
+      }
+    }
+
+    const customVars = [];
+    const varsBlock = text.match(/vars(?::pre-request)?\s*\{([\s\S]*?)\}/i);
+    if (varsBlock) {
+      const lines = varsBlock[1].split('\n');
+      for (const line of lines) {
+        const colonIdx = line.indexOf(':');
+        if (colonIdx > 0) {
+          const vKey = line.slice(0, colonIdx).trim();
+          const vVal = line.slice(colonIdx + 1).trim();
+          if (vKey) {
+            customVars.push({ id: crypto.randomUUID(), key: vKey, value: vVal });
+          }
+        }
+      }
+    }
+
+    let host = '';
+    try { if (url) host = new URL(url).hostname; } catch (_) {}
+
+    return [{
+      id: crypto.randomUUID(),
+      name: `Bruno: ${name}`,
+      enabled: false,
+      urlFilter: host ? `*${host}*` : (url ? `*${url}*` : ''),
+      useRegex: false,
+      headers,
+      redirects: [],
+      queryParams: [],
+      mocks: [],
+      customVars,
+    }];
+  }
+
+  return null;
+}
+
+// ── OpenAPI 3.x & Swagger 2.0 Parser ──
+function parseOpenApi(json, text = '') {
+  let spec = json;
+  if (!spec && typeof text === 'string') {
+    if (text.includes('openapi:') || text.includes('swagger:')) {
+      const pathsMatch = text.match(/paths:([\s\S]*)/i);
+      if (pathsMatch) {
+        spec = { openapi: '3.0.0', info: { title: 'OpenAPI Spec' }, paths: {} };
+        const pathLines = pathsMatch[1].match(/^\s{2,4}(\/[^:\s]+):/gm);
+        if (pathLines) {
+          pathLines.forEach(pl => {
+            const p = pl.trim().replace(':', '');
+            spec.paths[p] = { get: { summary: p } };
+          });
+        }
+      }
+    }
+  }
+
+  if (!spec || typeof spec !== 'object') return null;
+  const isOpenApi = (spec.openapi && spec.paths) || (spec.swagger && spec.paths);
+  if (!isOpenApi) return null;
+
+  let baseUrl = '';
+  if (spec.servers && spec.servers[0]?.url) {
+    baseUrl = spec.servers[0].url;
+  } else if (spec.host) {
+    const scheme = (spec.schemes && spec.schemes[0]) || 'https';
+    baseUrl = `${scheme}://${spec.host}${spec.basePath || ''}`;
+  }
+
+  let host = '';
+  try { if (baseUrl) host = new URL(baseUrl).hostname; } catch (_) {}
+
+  const allHeaders = [];
+  const allQueryParams = [];
+  const allMocks = [];
+
+  for (const [pathStr, pathItem] of Object.entries(spec.paths)) {
+    if (!pathItem || typeof pathItem !== 'object') continue;
+    for (const [method, op] of Object.entries(pathItem)) {
+      if (!op || typeof op !== 'object' || ['parameters', 'summary', 'description', '$ref'].includes(method)) continue;
+
+      const pathUrlFilter = host ? `*${host}${pathStr.replace(/\{.+?\}/g, '*')}*` : `*${pathStr.replace(/\{.+?\}/g, '*')}*`;
+
+      // Parameters
+      const params = [...(pathItem.parameters || []), ...(op.parameters || [])];
+      const qParams = [];
+      for (const p of params) {
+        if (!p || !p.name) continue;
+        if (p.in === 'header' && !allHeaders.some(h => h.name.toLowerCase() === p.name.toLowerCase())) {
+          allHeaders.push({
+            id: crypto.randomUUID(),
+            name: p.name,
+            value: p.example || p.schema?.default || p.default || '',
+            operation: 'set',
+            type: 'request',
+            enabled: true,
+          });
+        } else if (p.in === 'query') {
+          qParams.push({ key: p.name, value: String(p.example || p.schema?.default || p.default || '') });
+        }
+      }
+      if (qParams.length > 0) {
+        allQueryParams.push({
+          id: crypto.randomUUID(),
+          enabled: true,
+          urlFilter: pathUrlFilter,
+          useRegex: false,
+          addOrReplace: qParams,
+          remove: [],
+        });
+      }
+
+      // Mock Responses
+      if (op.responses) {
+        for (const [statusStr, resp] of Object.entries(op.responses)) {
+          const status = parseInt(statusStr, 10);
+          if (isNaN(status)) continue;
+          let mockBody = '';
+          if (resp.content && resp.content['application/json']) {
+            const jsonContent = resp.content['application/json'];
+            if (jsonContent.example) {
+              mockBody = JSON.stringify(jsonContent.example, null, 2);
+            } else if (jsonContent.examples) {
+              const firstEx = Object.values(jsonContent.examples)[0]?.value;
+              if (firstEx) mockBody = JSON.stringify(firstEx, null, 2);
+            }
+          } else if (resp.schema) {
+            mockBody = JSON.stringify(resp.schema.example || { message: resp.description || 'Mock response' }, null, 2);
+          }
+          if (mockBody) {
+            allMocks.push({
+              id: crypto.randomUUID(),
+              enabled: true,
+              urlFilter: pathUrlFilter,
+              useRegex: false,
+              statusCode: status,
+              responseBody: mockBody,
+              contentType: 'application/json',
+              delay: 0,
+            });
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  return [{
+    id: crypto.randomUUID(),
+    name: 'OpenAPI: ' + (spec.info?.title || 'API Specification'),
+    enabled: false,
+    urlFilter: host ? `*${host}*` : '',
+    useRegex: false,
+    headers: allHeaders,
+    redirects: [],
+    queryParams: allQueryParams,
+    mocks: allMocks,
+    customVars: [],
+  }];
+}
+
+// ── HAR (HTTP Archive) Parser ──
+function parseHar(json) {
+  if (!json || !json.log || !Array.isArray(json.log.entries)) return null;
+  const entries = json.log.entries;
+  if (!entries.length) return null;
+
+  const headers = [];
+  const queryParams = [];
+  const mocks = [];
+  let host = '';
+
+  for (const entry of entries) {
+    if (!entry.request) continue;
+    const req = entry.request;
+    if (!host && req.url) {
+      try { host = new URL(req.url).hostname; } catch (_) {}
+    }
+
+    // Headers
+    for (const h of req.headers || []) {
+      if (h.name && !h.name.startsWith(':') && h.name.toLowerCase() !== 'cookie') {
+        if (!headers.some(x => x.name.toLowerCase() === h.name.toLowerCase())) {
+          headers.push({
+            id: crypto.randomUUID(),
+            name: h.name,
+            value: h.value ?? '',
+            operation: 'set',
+            type: 'request',
+            enabled: true,
+          });
+        }
+      }
+    }
+
+    // Cookies -> Cookie Vault
+    if (Array.isArray(req.cookies) && req.cookies.length > 0) {
+      let reqHost = '';
+      try { reqHost = new URL(req.url).hostname; } catch (_) {}
+      if (reqHost) {
+        for (const c of req.cookies) {
+          if (c.name) {
+            addCookieToVault(reqHost, {
+              name: c.name,
+              value: c.value ?? '',
+              path: '/',
+              enabled: true,
+            });
+          }
+        }
+      }
+    }
+
+    // Query params
+    if (Array.isArray(req.queryString) && req.queryString.length > 0) {
+      queryParams.push({
+        id: crypto.randomUUID(),
+        enabled: true,
+        urlFilter: req.url,
+        useRegex: false,
+        addOrReplace: req.queryString.map(q => ({ key: q.name, value: q.value ?? '' })),
+        remove: [],
+      });
+    }
+
+    // Mocks from response
+    if (entry.response && entry.response.status && entry.response.content?.text) {
+      const mime = entry.response.content.mimeType || 'application/json';
+      mocks.push({
+        id: crypto.randomUUID(),
+        enabled: true,
+        urlFilter: req.url,
+        useRegex: false,
+        statusCode: entry.response.status,
+        responseBody: entry.response.content.text,
+        contentType: mime.includes('json') ? 'application/json' : 'text/plain',
+        delay: 0,
+      });
+    }
+  }
+
+  saveStorage();
+  return [{
+    id: crypto.randomUUID(),
+    name: 'HAR: ' + (host || 'Network Capture'),
+    enabled: false,
+    urlFilter: host ? `*${host}*` : '',
+    useRegex: false,
+    headers: headers.slice(0, 30),
+    redirects: [],
+    queryParams: queryParams.slice(0, 20),
+    mocks: mocks.slice(0, 20),
+    customVars: [],
+  }];
+}
+
+// ── SoapUI & WSDL Project Parser ──
+function parseSoapUi(text) {
+  if (!text || typeof text !== 'string') return null;
+  const isSoap = text.includes('<con:soapui-project') || text.includes('<wsdl:definitions') || text.includes('<soapenv:Envelope') || text.includes('<wsdl:service');
+  if (!isSoap) return null;
+
+  let endpoint = '';
+  const epMatch = text.match(/<con:endpoint>(.*?)<\/con:endpoint>/i) ||
+                  text.match(/soap:address\s+location=["'](.*?)["']/i) ||
+                  text.match(/location=["'](https?:\/\/.*?)["']/i) ||
+                  text.match(/targetNamespace=["'](https?:\/\/.*?)["']/i);
+  if (epMatch) endpoint = epMatch[1].trim();
+
+  const actions = [];
+  const actionMatches = text.matchAll(/soapAction=["'](.*?)["']/gi);
+  for (const m of actionMatches) {
+    if (m[1] && !actions.includes(m[1])) actions.push(m[1]);
+  }
+
+  const headers = [
+    {
+      id: crypto.randomUUID(),
+      name: 'Content-Type',
+      value: 'text/xml; charset=utf-8',
+      operation: 'set',
+      type: 'request',
+      enabled: true,
+    }
+  ];
+
+  if (actions[0]) {
+    headers.push({
+      id: crypto.randomUUID(),
+      name: 'SOAPAction',
+      value: `"${actions[0]}"`,
+      operation: 'set',
+      type: 'request',
+      enabled: true,
+    });
+  }
+
+  let host = '';
+  try { if (endpoint && endpoint.startsWith('http')) host = new URL(endpoint).hostname; } catch (_) {}
+
+  return [{
+    id: crypto.randomUUID(),
+    name: 'SoapUI: ' + (host || 'SOAP Web Service'),
+    enabled: false,
+    urlFilter: host ? `*${host}*` : (endpoint ? `*${endpoint}*` : ''),
+    useRegex: false,
+    headers,
+    redirects: [],
+    queryParams: [],
+    mocks: [],
+    customVars: [],
+  }];
+}
+
+async function parseUniversalPayload(rawInput) {
+  if (!rawInput || typeof rawInput !== 'string') return null;
+  const text = rawInput.trim();
+  if (!text) return null;
+
+  // 1. Stateless HeaderCraft Share Code (HC:... or URL with #import=)
+  if (text.startsWith('HC:') || text.includes('#import=') || text.includes('import=')) {
+    try {
+      let token = text;
+      if (token.startsWith('HC:')) token = token.slice(3);
+      if (token.includes('#import=')) token = token.split('#import=')[1];
+      else if (token.includes('import=')) token = token.split('import=')[1];
+      const decompressed = await decompressProfile(decodeURIComponent(token.trim()));
+      if (decompressed && typeof decompressed === 'object') {
+        return [{
+          ...decompressed,
+          id: crypto.randomUUID(),
+          name: (decompressed.name || 'Shared Profile') + ' (Imported)',
+          enabled: false,
+        }];
+      }
+    } catch (_) {}
+  }
+
+  // 2. SoapUI / WSDL XML Parser
+  const soapRes = parseSoapUi(text);
+  if (soapRes && soapRes.length > 0) return soapRes;
+
+  // 3. Bruno .bru plaintext Parser
+  const brunoBruRes = parseBruno(text, null);
+  if (brunoBruRes && brunoBruRes.length > 0) return brunoBruRes;
+
+  // 4. JSON Parser (Postman, Insomnia, OpenAPI, HAR, Bruno JSON, HeaderCraft, ModHeader/Requestly)
+  if (text.startsWith('{') || text.startsWith('[')) {
+    try {
+      const json = JSON.parse(text);
+
+      // Try Insomnia
+      const insomniaRes = parseInsomnia(json);
+      if (insomniaRes && insomniaRes.length > 0) return insomniaRes;
+
+      // Try OpenAPI / Swagger JSON
+      const openApiRes = parseOpenApi(json, text);
+      if (openApiRes && openApiRes.length > 0) return openApiRes;
+
+      // Try HAR (HTTP Archive)
+      const harRes = parseHar(json);
+      if (harRes && harRes.length > 0) return harRes;
+
+      // Try Bruno Collection JSON
+      const brunoJsonRes = parseBruno(text, json);
+      if (brunoJsonRes && brunoJsonRes.length > 0) return brunoJsonRes;
+
+      // Try Postman Collection or Environment
+      const postmanRes = parsePostman(json);
+      if (postmanRes && postmanRes.length > 0) return postmanRes;
+
+      // Try Native HeaderCraft
+      const hcRes = parseHeaderCraft(json);
+      if (hcRes && hcRes.length > 0) return hcRes;
+
+      // Try ModHeader / Requestly
+      const modRes = parseModHeader(json);
+      if (modRes && modRes.length > 0) return modRes;
+    } catch (_) {}
+  }
+
+  // 5. OpenAPI YAML fallback
+  if (text.includes('openapi:') || text.includes('swagger:')) {
+    const openApiYamlRes = parseOpenApi(null, text);
+    if (openApiYamlRes && openApiYamlRes.length > 0) return openApiYamlRes;
+  }
+
+  // 6. cURL Command Parser
+  const curlRes = parseCurlCommand(text);
+  if (curlRes) return [curlRes];
+
+  // 7. Raw URL with parameters or host
+  if (text.startsWith('http://') || text.startsWith('https://') || text.includes('.')) {
+    const urlCurl = parseCurlCommand(`curl "${text}"`);
+    if (urlCurl) return [urlCurl];
+  }
+
+  return null;
+}
+
+function detectImportPayload(rawInput) {
+  if (!rawInput || !rawInput.trim()) {
+    return { valid: false, type: '', summary: '', details: '' };
+  }
+  const text = rawInput.trim();
+
+  if (text.startsWith('HC:') || text.includes('#import=')) {
+    return {
+      valid: true,
+      type: 'HeaderCraft Share Code',
+      summary: 'Stateless profile link',
+      details: 'Compressed profile code ready to import.',
+    };
+  }
+
+  if (text.includes('<con:soapui-project') || text.includes('<wsdl:definitions') || text.includes('<soapenv:Envelope')) {
+    return {
+      valid: true,
+      type: 'SoapUI / WSDL Project',
+      summary: 'SOAP Web Service Specification',
+      details: 'Extracts endpoints, SOAPAction headers, and XML payloads.',
+    };
+  }
+
+  if (text.includes('meta {') && (text.includes('url:') || text.includes('headers {') || text.includes('type: http'))) {
+    return {
+      valid: true,
+      type: 'Bruno (.bru) File',
+      summary: 'Bruno HTTP Request',
+      details: 'Extracts URL, method, headers, and pre-request variables.',
+    };
+  }
+
+  if (text.startsWith('{') || text.startsWith('[')) {
+    try {
+      const json = JSON.parse(text);
+
+      if (json._type === 'export' || (Array.isArray(json.resources) && json.resources.some(r => r._type === 'request'))) {
+        return {
+          valid: true,
+          type: 'Insomnia Export',
+          summary: `${(json.resources || []).filter(r => r._type === 'request').length} Requests`,
+          details: 'Imports headers, auth, environments, and Cookie Jars.',
+        };
+      }
+
+      if ((json.openapi && json.paths) || (json.swagger && json.paths)) {
+        return {
+          valid: true,
+          type: 'OpenAPI / Swagger Spec',
+          summary: json.info?.title || 'OpenAPI 3.x / Swagger Spec',
+          details: `${Object.keys(json.paths || {}).length} Endpoints • Headers & Mock Responses`,
+        };
+      }
+
+      if (json.log && Array.isArray(json.log.entries)) {
+        return {
+          valid: true,
+          type: 'HAR (HTTP Archive)',
+          summary: `${json.log.entries.length} Network Entries`,
+          details: 'Extracts requests, headers, query params, cookies, and mock responses.',
+        };
+      }
+
+      if (json.bruno || json.version === '1' || (json.name && json.type === 'collection')) {
+        return {
+          valid: true,
+          type: 'Bruno Collection',
+          summary: json.name || 'Bruno Collection',
+          details: 'Bruno collection requests and environment variables.',
+        };
+      }
+
+      if (json.info && (json.item || json.info.schema)) {
+        return {
+          valid: true,
+          type: 'Postman Collection',
+          summary: json.info.name || 'Collection',
+          details: `Collection with ${(json.item || []).length} items/folders.`,
+        };
+      }
+      if (json.values && Array.isArray(json.values)) {
+        return {
+          valid: true,
+          type: 'Postman Environment',
+          summary: json.name || 'Environment',
+          details: `${json.values.length} variables.`,
+        };
+      }
+      if (json.name && Array.isArray(json.headers)) {
+        return {
+          valid: true,
+          type: 'HeaderCraft Profile',
+          summary: json.name,
+          details: `${json.headers.length} headers • ${(json.queryParams || []).length} query params`,
+        };
+      }
+      if (json.headers || json.respHeaders || json.rules) {
+        return {
+          valid: true,
+          type: 'ModHeader / Requestly',
+          summary: 'Rules File',
+          details: 'Headers and rewrite rules.',
+        };
+      }
+    } catch (_) {}
+  }
+
+  if (text.includes('openapi:') || text.includes('swagger:')) {
+    return {
+      valid: true,
+      type: 'OpenAPI Spec (YAML)',
+      summary: 'OpenAPI API Definition',
+      details: 'Endpoints and mock responses from YAML spec.',
+    };
+  }
+
+  if (text.toLowerCase().includes('curl') || text.includes('-H ') || text.includes('--header')) {
+    const curl = parseCurlCommand(text);
+    if (curl) {
+      return {
+        valid: true,
+        type: 'cURL Command',
+        summary: `${curl.headers.length} Headers • ${curl.queryParams.length} Query Params`,
+        details: `Target: ${curl.urlFilter || 'Any'} (${curl.method || 'GET'})`,
+      };
+    }
+  }
+
+  if (text.startsWith('http://') || text.startsWith('https://')) {
+    try {
+      const u = new URL(text);
+      return {
+        valid: true,
+        type: 'API URL',
+        summary: u.hostname,
+        details: `Path: ${u.pathname}`,
+      };
+    } catch (_) {}
+  }
+
+  return {
+    valid: false,
+    type: 'Unknown Format',
+    summary: 'Paste cURL, Postman, Insomnia, Bruno, OpenAPI, HAR, or SoapUI',
+    details: 'Could not detect supported structure yet.',
+  };
+}
+
+// ── Import / Export Handlers ──────────────────────────────────────────────────
+
+function exportProfile() {
+  const profile = profiles.find(p => p.id === selectedProfileId);
+  if (!profile) { showToast('Select a profile to export', 'error'); return; }
+  const json = JSON.stringify(profile, null, 2);
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob([json], { type: 'application/json' })),
+    download: `${profile.name.replace(/\s+/g, '_')}_headercraft.json`,
+  });
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('Profile exported', 'success');
+}
+
+async function importProfilesIntoState(newProfiles) {
+  if (!Array.isArray(newProfiles) || newProfiles.length === 0) {
+    showToast('No valid profiles could be imported', 'error');
+    return;
+  }
+
+  for (const raw of newProfiles) {
+    profiles.push(migrateProfile(raw));
+  }
+
+  selectedProfileId = profiles.at(-1).id;
+  await saveStorage();
+  render();
+  showToast(`Successfully imported ${newProfiles.length} profile${newProfiles.length > 1 ? 's' : ''}`, 'success');
+}
+
+async function handleUniversalFileInput(file) {
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const importedList = await parseUniversalPayload(text);
+    if (!importedList || importedList.length === 0) {
+      showToast('Unrecognized format in file', 'error');
+      return;
+    }
+    await importProfilesIntoState(importedList);
+    closeImportHubModal();
+  } catch (err) {
+    showToast('Failed to read or parse file', 'error');
+    console.error(err);
+  }
+}
+
+async function importProfile(e) {
+  const file = e.target.files[0];
+  if (file) await handleUniversalFileInput(file);
+  e.target.value = '';
+}
 
 async function importFromModHeader(e) {
   const file = e.target.files[0];
-  if (!file) return;
-
-  try {
-    const raw = JSON.parse(await file.text());
-
-    // Support: single object, array at root, or nested under a key
-    const items = Array.isArray(raw) ? raw
-      : raw.profiles ? raw.profiles          // some ModHeader versions
-      : raw.rules    ? raw.rules             // Requestly format
-      : [raw];
-
-    let imported = 0;
-
-    for (const item of items) {
-      // ── ModHeader format ────────────────────────────────────────────────
-      if (item.headers || item.respHeaders || item.filters) {
-        const urlFilter = item.filters?.[0]?.pattern ?? '';
-        const headers = [
-          ...(item.headers ?? []).map(h => ({
-            id: crypto.randomUUID(), enabled: h.enabled ?? true,
-            name: h.name, value: h.value ?? '', operation: 'set', type: 'request',
-          })),
-          ...(item.respHeaders ?? []).map(h => ({
-            id: crypto.randomUUID(), enabled: h.enabled ?? true,
-            name: h.name, value: h.value ?? '', operation: 'set', type: 'response',
-          })),
-        ];
-        const redirects = (item.urlReplacements ?? []).map(r => ({
-          id: crypto.randomUUID(), enabled: r.enabled ?? true,
-          fromUrl: r.name ?? '', toUrl: r.value ?? '',
-          useRegex: false, resourceTypes: [],
-        }));
-
-        profiles.push(migrateProfile({
-          id: crypto.randomUUID(), enabled: false,
-          name: item.title ?? item.name ?? `Imported ${imported + 1}`,
-          urlFilter, useRegex: false,
-          headers, redirects, queryParams: [], mocks: [],
-        }));
-        imported++;
-        continue;
-      }
-
-      // ── Requestly format ────────────────────────────────────────────────
-      if (item.ruleType === 'HEADERS' && item.pairs) {
-        const headers = [];
-        for (const pair of item.pairs) {
-          const src = pair.source?.value ?? '';
-          for (const [kind, type] of [['Request', 'request'], ['Response', 'response']]) {
-            for (const mod of pair.modifications?.[kind] ?? []) {
-              headers.push({
-                id: crypto.randomUUID(), enabled: true,
-                name: mod.header, value: mod.value ?? '',
-                operation: (mod.type ?? 'Add').toLowerCase() === 'remove' ? 'remove' : 'set',
-                type,
-              });
-            }
-          }
-          profiles.push(migrateProfile({
-            id: crypto.randomUUID(), enabled: false,
-            name: item.name ?? `Requestly ${imported + 1}`,
-            urlFilter: src, useRegex: false,
-            headers, redirects: [], queryParams: [], mocks: [],
-          }));
-          imported++;
-        }
-        continue;
-      }
-
-      // ── Requestly redirect rules ────────────────────────────────────────
-      if (item.ruleType === 'REDIRECT' && item.pairs) {
-        const redirects = item.pairs.map(pair => ({
-          id: crypto.randomUUID(), enabled: true,
-          fromUrl: pair.source?.value ?? '',
-          toUrl: pair.destination ?? '',
-          useRegex: pair.source?.operator === 'Matches',
-          resourceTypes: [],
-        }));
-        profiles.push(migrateProfile({
-          id: crypto.randomUUID(), enabled: false,
-          name: item.name ?? `Redirect Import ${imported + 1}`,
-          urlFilter: '', useRegex: false,
-          headers: [], redirects, queryParams: [], mocks: [],
-        }));
-        imported++;
-      }
-    }
-
-    if (!imported) { showToast('No recognisable profiles in file', 'error'); return; }
-    selectedProfileId = profiles.at(-1).id;
-    await saveStorage(); render();
-    showToast(`Imported ${imported} profile${imported > 1 ? 's' : ''} from ModHeader/Requestly`, 'success');
-  } catch (err) {
-    showToast('Could not parse file', 'error');
-    console.error('[HeaderCraft] ModHeader import error:', err);
-  } finally { e.target.value = ''; }
+  if (file) await handleUniversalFileInput(file);
+  e.target.value = '';
 }
 
 // ── Stateless URL Sharing (Compression / Decompression) ───────────────────────
@@ -1798,51 +3618,142 @@ async function openShareModal() {
   }
 }
 
-function openImportUrlModal() {
-  modalTitle.textContent = 'Import from Share Code / Link';
-  modalDesc.textContent = 'Paste a HeaderCraft share code (HC:...) or import link:';
-  modalInput.value = '';
-  modalInput.placeholder = 'HC:... or #import=...';
-  modalInput.readOnly = false;
-  modalActionBtn.textContent = 'Import Profile';
-  modalSubtext.textContent = 'Paste any HC:... share code or import link to immediately clone the profile.';
-  modalActionBtn.onclick = async () => {
-    const inputVal = modalInput.value.trim();
-    if (!inputVal) { showToast('Please paste a code or link', 'error'); return; }
-    try {
-      let token = inputVal;
-      if (token.startsWith('HC:')) token = token.slice(3);
-      if (token.includes('#import=')) token = token.split('#import=')[1];
-      else if (token.includes('import=')) token = token.split('import=')[1];
-      const imported = await decompressProfile(decodeURIComponent(token.trim()));
-      if (!imported || typeof imported !== 'object') throw new Error('Invalid format');
+// ── Import Hub Modal Controller ──────────────────────────────────────────────
 
-      const p = migrateProfile({
-        ...imported,
-        id: crypto.randomUUID(),
-        name: (imported.name || 'Shared Profile') + ' (Imported)',
-        enabled: false,
-      });
-      profiles.unshift(p);
-      selectedProfileId = p.id;
-      await saveStorage();
-      render();
-      closeModal();
-      showToast(`Imported "${p.name}"`, 'success');
+function openImportHubModal() {
+  if (!importHubModal) return;
+  importHubModal.classList.remove('hidden');
+  if (importHubTextarea) {
+    importHubTextarea.value = '';
+    updateImportPreview();
+    setTimeout(() => importHubTextarea.focus(), 50);
+  }
+}
+
+function closeImportHubModal() {
+  if (importHubModal) importHubModal.classList.add('hidden');
+}
+
+function updateImportPreview() {
+  if (!importHubTextarea || !importPreviewBox) return;
+  const text = importHubTextarea.value;
+  const detection = detectImportPayload(text);
+
+  if (!text.trim() || !detection.valid) {
+    importPreviewBox.classList.add('hidden');
+    return;
+  }
+
+  importPreviewBox.classList.remove('hidden');
+  if (importDetectedPill) importDetectedPill.textContent = `Detected: ${detection.type}`;
+  if (importPreviewSummary) importPreviewSummary.textContent = detection.summary;
+  if (importPreviewDetails) importPreviewDetails.textContent = detection.details;
+}
+
+// Attach Import Hub Modal event listeners
+if (tabImportText && tabImportFile) {
+  tabImportText.addEventListener('click', () => {
+    tabImportText.classList.add('active');
+    tabImportFile.classList.remove('active');
+    importContentText.classList.remove('hidden');
+    importContentFile.classList.add('hidden');
+    importHubTextarea.focus();
+  });
+  tabImportFile.addEventListener('click', () => {
+    tabImportFile.classList.add('active');
+    tabImportText.classList.remove('active');
+    importContentFile.classList.remove('hidden');
+    importContentText.classList.add('hidden');
+  });
+}
+
+if (importHubTextarea) {
+  importHubTextarea.addEventListener('input', updateImportPreview);
+  importHubTextarea.addEventListener('paste', () => setTimeout(updateImportPreview, 10));
+}
+
+if (btnImportPasteSample) {
+  btnImportPasteSample.addEventListener('click', () => {
+    importHubTextarea.value = `curl -X POST "https://api.staging.example.com/v1/users?role=admin&debug=true" \\\n  -H "Authorization: Bearer dev_secret_token_123" \\\n  -H "X-Client-Version: 2.5.0" \\\n  -H "Accept: application/json"`;
+    updateImportPreview();
+    showToast('Sample cURL loaded', 'info');
+  });
+}
+
+if (btnImportClearText) {
+  btnImportClearText.addEventListener('click', () => {
+    importHubTextarea.value = '';
+    updateImportPreview();
+    importHubTextarea.focus();
+  });
+}
+
+if (btnImportHubSubmit) {
+  btnImportHubSubmit.addEventListener('click', async () => {
+    const text = importHubTextarea.value.trim();
+    if (!text) {
+      showToast('Please paste a cURL command, Postman JSON, URL, or Share Code', 'error');
+      return;
+    }
+
+    try {
+      const importedList = await parseUniversalPayload(text);
+      if (!importedList || importedList.length === 0) {
+        showToast('Could not parse input. Please check the syntax.', 'error');
+        return;
+      }
+      await importProfilesIntoState(importedList);
+      closeImportHubModal();
     } catch (err) {
-      showToast('Invalid or corrupted share code', 'error');
+      showToast('Import error: ' + (err.message || 'Invalid format'), 'error');
       console.error(err);
     }
-  };
-  openModal();
-  setTimeout(() => modalInput.focus(), 50);
+  });
 }
+
+if (btnCloseImportHub) btnCloseImportHub.addEventListener('click', closeImportHubModal);
+if (importHubModal) {
+  importHubModal.addEventListener('click', (e) => {
+    if (e.target === importHubModal) closeImportHubModal();
+  });
+}
+
+// Drag & Drop in File tab
+if (importDropZone && importHubFileInput) {
+  importDropZone.addEventListener('click', () => importHubFileInput.click());
+  importDropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    importDropZone.classList.add('dragover');
+  });
+  importDropZone.addEventListener('dragleave', () => importDropZone.classList.remove('dragover'));
+  importDropZone.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    importDropZone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) await handleUniversalFileInput(file);
+  });
+  importHubFileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (file) await handleUniversalFileInput(file);
+    e.target.value = '';
+  });
+}
+
+if (cardFormatPostman) cardFormatPostman.addEventListener('click', () => importHubFileInput?.click());
+if (cardFormatInsomnia) cardFormatInsomnia.addEventListener('click', () => importHubFileInput?.click());
+if (cardFormatBruno) cardFormatBruno.addEventListener('click', () => importHubFileInput?.click());
+if (cardFormatOpenapi) cardFormatOpenapi.addEventListener('click', () => importHubFileInput?.click());
+if (cardFormatHar) cardFormatHar.addEventListener('click', () => importHubFileInput?.click());
+if (cardFormatSoapui) cardFormatSoapui.addEventListener('click', () => importHubFileInput?.click());
+if (cardFormatHeadercraft) cardFormatHeadercraft.addEventListener('click', () => importHubFileInput?.click());
+if (cardFormatModheader) cardFormatModheader.addEventListener('click', () => importHubFileInput?.click());
+
+if (btnImportHub) btnImportHub.addEventListener('click', openImportHubModal);
 
 // ── Event Listeners ───────────────────────────────────────────────────────────
 
-btnAddProfile.addEventListener('click', addProfile);
+btnAddProfile.addEventListener('click', () => addProfile());
 btnShareProfile.addEventListener('click', openShareModal);
-btnImportUrl.addEventListener('click', openImportUrlModal);
 btnCloseModal.addEventListener('click', closeModal);
 shareModal.addEventListener('click', (e) => { if (e.target === shareModal) closeModal(); });
 
@@ -2008,6 +3919,62 @@ if (btnMockLogs) {
 if (btnEmptyAction) {
   btnEmptyAction.addEventListener('click', () => addRule());
 }
+
+// ── Workspace & Folder Event Listeners ──
+if (btnWorkspaceSwitcher) {
+  btnWorkspaceSwitcher.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleWorkspaceDropdown();
+  });
+}
+
+if (btnCreateWorkspace) {
+  btnCreateWorkspace.addEventListener('click', () => {
+    closeWorkspaceDropdown();
+    handleCreateWorkspace();
+  });
+}
+
+if (btnRenameWorkspace) {
+  btnRenameWorkspace.addEventListener('click', () => {
+    closeWorkspaceDropdown();
+    handleRenameWorkspace();
+  });
+}
+
+if (btnDeleteWorkspace) {
+  btnDeleteWorkspace.addEventListener('click', () => {
+    closeWorkspaceDropdown();
+    handleDeleteWorkspace();
+  });
+}
+
+if (btnAddFolder) {
+  btnAddFolder.addEventListener('click', () => {
+    handleCreateFolder();
+  });
+}
+
+if (btnProfileFolderSelect) {
+  btnProfileFolderSelect.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleFolderDropdown();
+  });
+}
+
+// Dismiss workspace & folder dropdowns on outside click
+document.addEventListener('click', (e) => {
+  if (workspaceDropdown && !workspaceDropdown.classList.contains('hidden')) {
+    if (!workspaceDropdown.contains(e.target) && !btnWorkspaceSwitcher?.contains(e.target)) {
+      closeWorkspaceDropdown();
+    }
+  }
+  if (profileFolderDropdown && !profileFolderDropdown.classList.contains('hidden')) {
+    if (!profileFolderDropdown.contains(e.target) && !btnProfileFolderSelect?.contains(e.target)) {
+      closeFolderDropdown();
+    }
+  }
+});
 
 // ── Auto-Disable Timer Listener ──
 if (autoDisableSelect) {
@@ -2239,6 +4206,466 @@ if (varsModal) {
   });
 }
 
+// ── Cookie Vault Controller (Per-Domain Session Cookie Store) ─────────────────
+
+function openCookieVaultModal() {
+  if (!cookieVaultModal) return;
+
+  // If cookieVault is empty, seed with current profile host or default
+  if (!cookieVault.length) {
+    const profile = profiles.find(p => p.id === selectedProfileId);
+    let initialDomain = 'api.example.com';
+    if (profile?.urlFilter && !profile.urlFilter.includes('*') && !profile.useRegex) {
+      initialDomain = profile.urlFilter;
+    }
+    cookieVault.push({
+      id: crypto.randomUUID(),
+      domain: initialDomain,
+      enabled: true,
+      cookies: [
+        {
+          id: crypto.randomUUID(),
+          name: 'session_id',
+          value: 'sk_test_' + Math.random().toString(36).substring(2, 10),
+          path: '/',
+          enabled: true,
+          secure: true,
+          httpOnly: false,
+        }
+      ],
+    });
+    saveStorage();
+  }
+
+  selectedCookieDomainId = selectedCookieDomainId || cookieVault[0]?.id;
+  cookieVaultModal.classList.remove('hidden');
+  renderCookieVault();
+}
+
+function closeCookieVaultModal() {
+  if (cookieVaultModal) cookieVaultModal.classList.add('hidden');
+  const profile = profiles.find(p => p.id === selectedProfileId);
+  if (profile) renderMainPanel();
+}
+
+function renderCookieVault() {
+  if (!cookieDomainSelect) return;
+  cookieDomainSelect.innerHTML = '';
+
+  for (const store of cookieVault) {
+    const opt = document.createElement('option');
+    opt.value = store.id;
+    opt.textContent = `🌐 ${store.domain} (${(store.cookies || []).length})`;
+    if (store.id === selectedCookieDomainId) opt.selected = true;
+    cookieDomainSelect.appendChild(opt);
+  }
+
+  const activeStore = cookieVault.find(s => s.id === selectedCookieDomainId) || cookieVault[0];
+  if (!activeStore) {
+    if (cookieRowsContainer) cookieRowsContainer.innerHTML = '';
+    if (cookieEmptyHint) cookieEmptyHint.classList.remove('hidden');
+    if (cookieCountLabel) cookieCountLabel.textContent = 'No domains in Cookie Vault';
+    return;
+  }
+
+  selectedCookieDomainId = activeStore.id;
+
+  if (cookieDomainEnabled) {
+    cookieDomainEnabled.checked = activeStore.enabled !== false;
+  }
+
+  const cookies = activeStore.cookies || [];
+  if (cookieCountLabel) {
+    cookieCountLabel.textContent = `${cookies.length} cookie${cookies.length !== 1 ? 's' : ''} stored for ${activeStore.domain}`;
+  }
+
+  if (cookieRowsContainer) {
+    cookieRowsContainer.innerHTML = '';
+    for (const c of cookies) {
+      cookieRowsContainer.appendChild(buildCookieRow(activeStore, c));
+    }
+  }
+
+  if (cookieEmptyHint) {
+    cookieEmptyHint.classList.toggle('hidden', cookies.length > 0);
+  }
+}
+
+function buildCookieRow(store, c) {
+  const row = document.createElement('div');
+  row.className = 'cookie-row';
+  row.dataset.cookieId = c.id;
+
+  // 1. Enabled checkbox
+  const check = document.createElement('input');
+  check.type = 'checkbox';
+  check.checked = c.enabled !== false;
+  check.title = 'Enable / disable this cookie';
+  check.addEventListener('change', () => {
+    c.enabled = check.checked;
+    saveStorage();
+  });
+
+  // 2. Name input
+  const nameInput = document.createElement('input');
+  nameInput.type = 'text';
+  nameInput.placeholder = 'cookie_name';
+  nameInput.value = c.name ?? '';
+  nameInput.spellcheck = false;
+  nameInput.addEventListener('input', () => {
+    c.name = nameInput.value.trim();
+    saveStorage();
+  });
+
+  // 3. Value input with toggle visibility & copy
+  const valWrap = document.createElement('div');
+  valWrap.className = 'cookie-val-wrap';
+
+  const valInput = document.createElement('input');
+  valInput.type = 'password';
+  valInput.placeholder = 'cookie_value';
+  valInput.value = c.value ?? '';
+  valInput.spellcheck = false;
+  valInput.addEventListener('input', () => {
+    c.value = valInput.value;
+    saveStorage();
+  });
+
+  const toggleVisBtn = document.createElement('button');
+  toggleVisBtn.type = 'button';
+  toggleVisBtn.className = 'cookie-toggle-vis';
+  const eyeOpenSvg = '<svg viewBox="0 0 16 16" width="11" height="11" fill="currentColor"><path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/><path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/></svg>';
+  const eyeClosedSvg = '<svg viewBox="0 0 16 16" width="11" height="11" fill="currentColor"><path d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5a7.028 7.028 0 0 0-2.79.588l.77.771A5.944 5.944 0 0 1 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.134 13.134 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755q-.247.248-.517.486z"/><path d="M11.297 9.176a3.5 3.5 0 0 0-4.474-4.474l.823.823a2.5 2.5 0 0 1 2.829 2.829zm-2.943 1.299.822.822a3.5 3.5 0 0 1-4.474-4.474l.823.823a2.5 2.5 0 0 0 2.829 2.829z"/><path d="M3.35 5.47q-.27.24-.518.487A13.134 13.134 0 0 0 1.172 8l.195.288c.335.48.83 1.12 1.465 1.755C4.121 11.332 5.881 12.5 8 12.5c.716 0 1.39-.133 2.02-.36l.77.772A7.029 7.029 0 0 1 8 13.5C3 13.5 0 8 0 8s.939-1.721 2.641-3.238l.708.709zm10.296 8.884-12-12 .708-.708 12 12z"/></svg>';
+  toggleVisBtn.innerHTML = eyeOpenSvg;
+  toggleVisBtn.title = 'Toggle show/hide value';
+  toggleVisBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isPwd = valInput.type === 'password';
+    valInput.type = isPwd ? 'text' : 'password';
+    toggleVisBtn.innerHTML = isPwd ? eyeClosedSvg : eyeOpenSvg;
+  });
+
+  valWrap.append(valInput, toggleVisBtn);
+
+  // 4. Path input
+  const pathInput = document.createElement('input');
+  pathInput.type = 'text';
+  pathInput.placeholder = '/';
+  pathInput.value = c.path || '/';
+  pathInput.spellcheck = false;
+  pathInput.addEventListener('input', () => {
+    c.path = pathInput.value.trim() || '/';
+    saveStorage();
+  });
+
+  // 5. Actions (Copy & Delete)
+  const actions = document.createElement('div');
+  actions.className = 'cookie-row-actions';
+
+  const copyBtn = document.createElement('button');
+  copyBtn.type = 'button';
+  copyBtn.className = 'cookie-btn-icon';
+  copyBtn.innerHTML = '<svg viewBox="0 0 16 16" width="11" height="11" fill="currentColor"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/></svg>';
+  copyBtn.title = 'Copy value';
+  copyBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(c.value ?? '').then(() => {
+      showToast(`Copied cookie ${c.name}`, 'success');
+    });
+  });
+
+  const delBtn = document.createElement('button');
+  delBtn.type = 'button';
+  delBtn.className = 'cookie-btn-icon danger';
+  delBtn.innerHTML = '<svg viewBox="0 0 16 16" width="11" height="11" fill="currentColor"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>';
+  delBtn.title = 'Delete cookie';
+  delBtn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    store.cookies = store.cookies.filter(x => x.id !== c.id);
+    await saveStorage();
+    renderCookieVault();
+    showToast('Cookie deleted', 'info');
+  });
+
+  actions.append(copyBtn, delBtn);
+  row.append(check, nameInput, valWrap, pathInput, actions);
+  return row;
+}
+
+async function handleAddCookieDomain() {
+  const domain = await openPromptDialog({
+    title: 'New Domain Store',
+    desc: 'Enter domain (e.g. api.example.com, localhost:3000):',
+    placeholder: 'api.example.com',
+    confirmText: 'Add Domain',
+  });
+  if (!domain) return;
+
+  const cleanDomain = domain.trim().replace(/^https?:\/\//i, '').replace(/\/.*$/, '').replace(/^\*?\./, '');
+  if (!cleanDomain) return;
+
+  const existing = cookieVault.find(s => s.domain === cleanDomain);
+  if (existing) {
+    selectedCookieDomainId = existing.id;
+    renderCookieVault();
+    showToast(`Domain ${cleanDomain} already exists`, 'info');
+    return;
+  }
+
+  const newStore = {
+    id: crypto.randomUUID(),
+    domain: cleanDomain,
+    enabled: true,
+    cookies: [],
+  };
+
+  cookieVault.push(newStore);
+  selectedCookieDomainId = newStore.id;
+  await saveStorage();
+  renderCookieVault();
+  showToast(`Added domain store: "${cleanDomain}"`, 'success');
+}
+
+async function handleDeleteCookieDomain() {
+  const activeStore = cookieVault.find(s => s.id === selectedCookieDomainId);
+  if (!activeStore) return;
+
+  cookieVault = cookieVault.filter(s => s.id !== activeStore.id);
+  selectedCookieDomainId = cookieVault[0]?.id || null;
+  await saveStorage();
+  renderCookieVault();
+  showToast(`Deleted domain store: "${activeStore.domain}"`, 'info');
+}
+
+async function handleAddCookieRow() {
+  const activeStore = cookieVault.find(s => s.id === selectedCookieDomainId);
+  if (!activeStore) return;
+
+  const newCookie = {
+    id: crypto.randomUUID(),
+    name: '',
+    value: '',
+    path: '/',
+    enabled: true,
+    secure: false,
+    httpOnly: false,
+  };
+
+  activeStore.cookies = activeStore.cookies || [];
+  activeStore.cookies.push(newCookie);
+  await saveStorage();
+  renderCookieVault();
+
+  setTimeout(() => {
+    const input = cookieRowsContainer?.querySelector(`[data-cookie-id="${newCookie.id}"] input[placeholder="cookie_name"]`);
+    if (input) input.focus();
+  }, 50);
+}
+
+function handleToggleCookieStringBox() {
+  if (!cookieStringImporter) return;
+  const isHidden = cookieStringImporter.classList.toggle('hidden');
+  if (!isHidden && cookieStringInput) {
+    cookieStringInput.value = '';
+    cookieStringInput.focus();
+  }
+}
+
+async function handleSubmitCookieString() {
+  const activeStore = cookieVault.find(s => s.id === selectedCookieDomainId);
+  if (!activeStore || !cookieStringInput) return;
+
+  let raw = cookieStringInput.value.trim();
+  if (!raw) return;
+
+  raw = raw.replace(/^Cookie:\s*/i, '').replace(/^(?:curl\s+.*?)?(?:--cookie|-b)\s+['"]?/i, '').replace(/['"]$/, '');
+  const pairs = raw.split(';');
+  let added = 0;
+
+  activeStore.cookies = activeStore.cookies || [];
+  for (const pair of pairs) {
+    const p = pair.trim();
+    if (!p) continue;
+    const eqIdx = p.indexOf('=');
+    if (eqIdx > 0) {
+      const k = p.slice(0, eqIdx).trim();
+      const v = p.slice(eqIdx + 1).trim();
+      if (k) {
+        const existing = activeStore.cookies.find(x => x.name === k);
+        if (existing) {
+          existing.value = v;
+        } else {
+          activeStore.cookies.push({
+            id: crypto.randomUUID(),
+            name: k,
+            value: v,
+            path: '/',
+            enabled: true,
+            secure: false,
+            httpOnly: false,
+          });
+        }
+        added++;
+      }
+    }
+  }
+
+  cookieStringInput.value = '';
+  if (cookieStringImporter) cookieStringImporter.classList.add('hidden');
+  await saveStorage();
+  renderCookieVault();
+  showToast(`Parsed and added ${added} cookies`, 'success');
+}
+
+async function handleFetchTabCookies() {
+  const activeStore = cookieVault.find(s => s.id === selectedCookieDomainId);
+  if (!activeStore) return;
+
+  try {
+    let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab) [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+
+    let domainToSearch = activeStore.domain;
+    if (tab?.url) {
+      try {
+        const tabUrl = new URL(tab.url);
+        if (!domainToSearch || domainToSearch === 'api.example.com') {
+          domainToSearch = tabUrl.hostname;
+          activeStore.domain = domainToSearch;
+        }
+      } catch (_) {}
+    }
+
+    let cookies = [];
+    if (chrome.cookies) {
+      cookies = await chrome.cookies.getAll({ domain: domainToSearch });
+      if (!cookies.length && tab?.url) {
+        cookies = await chrome.cookies.getAll({ url: tab.url });
+      }
+    }
+
+    if (!cookies || cookies.length === 0) {
+      showToast(`No live cookies found for ${domainToSearch}`, 'info');
+      return;
+    }
+
+    activeStore.cookies = activeStore.cookies || [];
+    for (const c of cookies) {
+      const existing = activeStore.cookies.find(x => x.name === c.name);
+      if (existing) {
+        existing.value = c.value;
+        existing.path = c.path || '/';
+      } else {
+        activeStore.cookies.push({
+          id: crypto.randomUUID(),
+          name: c.name,
+          value: c.value,
+          path: c.path || '/',
+          enabled: true,
+          secure: !!c.secure,
+          httpOnly: !!c.httpOnly,
+        });
+      }
+    }
+
+    await saveStorage();
+    renderCookieVault();
+    showToast(`Imported ${cookies.length} live cookies from ${domainToSearch}`, 'success');
+  } catch (err) {
+    showToast('Failed to fetch cookies from browser', 'error');
+    console.error(err);
+  }
+}
+
+async function handleSyncBrowserCookies() {
+  const activeStore = cookieVault.find(s => s.id === selectedCookieDomainId);
+  if (!activeStore) return;
+
+  if (!chrome.cookies) {
+    showToast('Chrome cookies API unavailable', 'error');
+    return;
+  }
+
+  try {
+    let count = 0;
+    const protocol = activeStore.domain.includes('localhost') ? 'http' : 'https';
+    const cleanDom = activeStore.domain.replace(/^\*?\./, '');
+
+    for (const c of activeStore.cookies || []) {
+      if (c.enabled === false || !c.name) continue;
+      const url = `${protocol}://${cleanDom}${c.path || '/'}`;
+      await chrome.cookies.set({
+        url,
+        name: c.name,
+        value: c.value ?? '',
+        path: c.path || '/',
+      });
+      count++;
+    }
+
+    showToast(`Synced ${count} cookies into Chrome for ${activeStore.domain}`, 'success');
+  } catch (err) {
+    showToast('Failed to sync cookies to browser', 'error');
+    console.error(err);
+  }
+}
+
+function handleCopyCookieHeader() {
+  const activeStore = cookieVault.find(s => s.id === selectedCookieDomainId);
+  if (!activeStore) return;
+
+  const valid = (activeStore.cookies || []).filter(c => c.enabled !== false && c.name);
+  if (!valid.length) {
+    showToast('No active cookies to copy', 'info');
+    return;
+  }
+
+  const str = `Cookie: ${valid.map(c => `${c.name}=${c.value ?? ''}`).join('; ')}`;
+  navigator.clipboard.writeText(str).then(() => {
+    showToast('Copied "Cookie: ..." header to clipboard', 'success');
+  });
+}
+
+// ── Cookie Vault Event Listeners ──
+if (btnCookieVault) btnCookieVault.addEventListener('click', openCookieVaultModal);
+if (btnProfileCookieVault) btnProfileCookieVault.addEventListener('click', openCookieVaultModal);
+if (btnCloseCookieVault) btnCloseCookieVault.addEventListener('click', closeCookieVaultModal);
+if (btnCookieVaultDone) btnCookieVaultDone.addEventListener('click', closeCookieVaultModal);
+
+if (cookieDomainSelect) {
+  cookieDomainSelect.addEventListener('change', () => {
+    selectedCookieDomainId = cookieDomainSelect.value;
+    renderCookieVault();
+  });
+}
+
+if (cookieDomainEnabled) {
+  cookieDomainEnabled.addEventListener('change', async () => {
+    const activeStore = cookieVault.find(s => s.id === selectedCookieDomainId);
+    if (activeStore) {
+      activeStore.enabled = cookieDomainEnabled.checked;
+      await saveStorage();
+      showToast(`Cookie auto-injection for ${activeStore.domain} ${activeStore.enabled ? 'enabled' : 'disabled'}`, 'info');
+    }
+  });
+}
+
+if (btnAddCookieDomain) btnAddCookieDomain.addEventListener('click', handleAddCookieDomain);
+if (btnDelCookieDomain) btnDelCookieDomain.addEventListener('click', handleDeleteCookieDomain);
+if (btnFetchTabCookies) btnFetchTabCookies.addEventListener('click', handleFetchTabCookies);
+if (btnSyncBrowserCookies) btnSyncBrowserCookies.addEventListener('click', handleSyncBrowserCookies);
+if (btnCopyCookieHeader) btnCopyCookieHeader.addEventListener('click', handleCopyCookieHeader);
+if (btnToggleCookieStringBox) btnToggleCookieStringBox.addEventListener('click', handleToggleCookieStringBox);
+if (btnSubmitCookieString) btnSubmitCookieString.addEventListener('click', handleSubmitCookieString);
+if (btnCancelCookieString) btnCancelCookieString.addEventListener('click', handleToggleCookieStringBox);
+if (btnAddCookieRow) btnAddCookieRow.addEventListener('click', handleAddCookieRow);
+
+if (cookieVaultModal) {
+  cookieVaultModal.addEventListener('click', (e) => {
+    if (e.target === cookieVaultModal) closeCookieVaultModal();
+  });
+}
+
 // ── Expand to Full Tab ───────────────────────────────────────────────────────
 
 /** Detect if we are already running in a full browser tab (not a popup). */
@@ -2293,6 +4720,7 @@ if (helpModal) {
     if (e.key === 'Escape') {
       if (varsModal && !varsModal.classList.contains('hidden')) closeVarsModal();
       if (helpModal && !helpModal.classList.contains('hidden')) closeHelpModal();
+      if (cookieVaultModal && !cookieVaultModal.classList.contains('hidden')) closeCookieVaultModal();
     }
   });
 
