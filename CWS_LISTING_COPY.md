@@ -90,7 +90,7 @@ Designed from the ground up on Chrome’s secure Manifest V3 engine (`declarativ
 HeaderCraft requires only minimal permissions strictly necessary for network rule execution:
 
 * `declarativeNetRequest`: Used natively to modify HTTP headers and perform URL redirects locally.
-* `storage`: Used to persist your custom profiles and Cookie Vault locally in your browser.
+* `storage`: Used to persist your custom profiles, workspaces, folders, rules, and Cookie Vault locally in your browser.
 * `cookies`: Used strictly by the Cookie Vault to inspect, save, and restore local session testing cookies for user-specified domains.
 * `alarms`: Used for background alarms, auto-disable profile timers, and dynamic variable updates.
 
